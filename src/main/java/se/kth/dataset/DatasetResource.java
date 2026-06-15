@@ -1,67 +1,103 @@
 package se.kth.dataset;
 
 import jakarta.annotation.security.PermitAll;
-import jakarta.ws.rs.Consumes;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import lombok.extern.slf4j.Slf4j;
+import org.eclipse.microprofile.jwt.JsonWebToken;
+import se.kth.credential.CredentialService;
+import se.kth.security.KeycloakUser;
 
+@Slf4j
 @Path("api/datasets")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class DatasetResource {
 
-  @GET
-  @PermitAll
-  public Response listDatasets() {
-    // Fetch datasets based on groups
-    return Response.noContent().build();
-  }
+    @Inject
+    JsonWebToken jwt;
 
-  @GET
-  @Path("{id}")
-  @PermitAll
-  public Response getDataset(@PathParam("id") String id) {
-    // include credentials if existing, otherwise its empty indicating to frontend no credentials
-    return Response.noContent().build();
-  }
+    @Inject
+    DatasetService datasetService;
 
-  /*
-   * For user-specific things like favorites and credentials
-   * use the JWT token to extract unique identifier for user. 
-   */
+    @Inject
+    CredentialService credentialService;
 
-  @POST
-  @Path("{id}")
-  @PermitAll
-  public Response favoriteDataset(@PathParam("id") String id) {
-    return Response.noContent().build();
-  }
+    @GET
+    @PermitAll
+    public Response listDatasets() {
+        KeycloakUser user = KeycloakUser.fromToken(jwt);
 
+        try {
+            if (user.isInGroup("admin")) {
+                return Response.ok(datasetService.listDatasets()).build();
+            } else {
+                return Response.ok(datasetService.listUserDatasets(user)).build();
+            }
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
 
-  @POST
-  @Path("{id}/credentials")
-  @PermitAll
-  public Response createCredentials(@PathParam("id") String id) {
-    return Response.noContent().build();
-  }
+    @GET
+    @Path("{id}")
+    @PermitAll
+    public Response getDataset(@PathParam("id") String id) {
+        KeycloakUser user = KeycloakUser.fromToken(jwt);
 
-  @POST
-  @Path("{id}/credentials/{credential_id}/rotate")
-  @PermitAll
-  public Response rotateCredentials(@PathParam("id") String id, @PathParam("credential_id") String credentialId) {
-    return Response.noContent().build();
-  }
+        try {
+            if (user.isInGroup("admin")) {
+                return Response.ok(datasetService.getDataset(id)).build();
+            } else {
+                return Response.ok(datasetService.getDatasetForUser(id, user)).build();
+            }
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
 
-  @POST
-  @Path("{id}/credentials/{credential_id}")
-  @PermitAll
-  public Response deleteCredentials(@PathParam("id") String id, @PathParam("credential_id") String credentialId) {
-    return Response.noContent().build();
-  }
+    /*
+     * For user-specific things like favorites and credentials
+     * use the JWT token to extract unique identifier for user.
+     */
+
+    @POST
+    @Path("{id}")
+    @PermitAll
+    public Response favoriteDataset(@PathParam("id") String id) {
+        return Response.noContent().build();
+    }
+
+    @GET
+    @Path("{id}/credentials")
+    @PermitAll
+    public Response getCredentials(@PathParam("id") String id) {
+        return Response.noContent().build();
+    }
+
+    @POST
+    @Path("{id}/credentials")
+    @PermitAll
+    public Response createCredentials(@PathParam("id") String id) {
+        return Response.noContent().build();
+    }
+
+    @POST
+    @Path("{id}/credentials/{credential_id}/rotate")
+    @PermitAll
+    public Response rotateCredentials(@PathParam("id") String id, @PathParam("credential_id") String credentialId) {
+        return Response.noContent().build();
+    }
+
+    @POST
+    @Path("{id}/credentials/{credential_id}")
+    @PermitAll
+    public Response deleteCredentials(@PathParam("id") String id, @PathParam("credential_id") String credentialId) {
+        return Response.noContent().build();
+    }
 
 }
