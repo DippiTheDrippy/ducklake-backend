@@ -61,6 +61,14 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- S3 Client Lib (For Garage) -->
+        <dependency>
+            <groupId>io.quarkiverse.amazonservices</groupId>
+            <artifactId>quarkus-amazon-s3</artifactId>
+            <version>3.19.0</version>
+            <scope>compile</scope>
+        </dependency>
+
         <!-- OpenAPI -->
         <dependency>
             <groupId>io.quarkus</groupId>

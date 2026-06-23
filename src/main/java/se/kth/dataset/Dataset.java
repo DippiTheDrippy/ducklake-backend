@@ -27,8 +27,6 @@ public class Dataset {
 
     @Column(name = "bucket_name", nullable = false, unique = true)
     private String bucketName;
-    @Column(name = "metadata_schema", nullable = false, unique = true)
-    private String metadataSchema;
 
     @Column(name = "is_public", nullable = false)
     private boolean isPublic;
@@ -38,12 +36,11 @@ public class Dataset {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    public Dataset(String name, String displayName, String description, String bucketName, String metadataSchema, boolean isPublic) {
+    public Dataset(String name, String displayName, String description, String bucketName, boolean isPublic) {
         this.name = name;
         this.displayName = displayName;
         this.description = description;
         this.bucketName = bucketName;
-        this.metadataSchema = metadataSchema;
         this.isPublic = isPublic;
     }
 

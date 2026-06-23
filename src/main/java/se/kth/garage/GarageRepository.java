@@ -4,19 +4,27 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import se.kth.garage.dto.*;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
+import java.io.InputStream;
 import java.time.OffsetDateTime;
 
 @ApplicationScoped
 public class GarageRepository {
 
+
+    private final S3Client s3Client;
     private final GarageAdminClient garageAdminClient;
     private final String adminToken;
 
     public GarageRepository(
+            S3Client s3Client,
             @RestClient GarageAdminClient garageAdminClient,
             @ConfigProperty(name = "app.garage.admin.token") String adminToken
     ) {
+        this.s3Client = s3Client;
         this.garageAdminClient = garageAdminClient;
         this.adminToken = adminToken;
     }
@@ -86,6 +94,20 @@ public class GarageRepository {
                         )
                 )
         );
+    }
+
+    /*
+     * UPLOADS
+     */
+
+    public void upload(String fileName, InputStream inputStream, long contentLength, String contentType, String bucketName) {
+        PutObjectRequest request = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(fileName)
+                .contentType(contentType)
+                .build();
+
+        s3Client.putObject(request, RequestBody.fromInputStream(inputStream, contentLength));
     }
 
     /*

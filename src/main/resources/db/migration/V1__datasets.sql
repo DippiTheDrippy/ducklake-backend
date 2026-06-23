@@ -9,7 +9,6 @@ CREATE TABLE datasets (
     description TEXT,
 
     bucket_name TEXT NOT NULL UNIQUE,
-    metadata_schema TEXT NOT NULL UNIQUE,
 
     is_public BOOLEAN NOT NULL DEFAULT false,
 

@@ -23,6 +23,8 @@ CREATE TABLE credentials (
     dataset_id UUID NOT NULL,
     user_id UUID NOT NULL,
 
+    access_level TEXT NOT NULL,
+
     postgres_username TEXT NOT NULL,
     garage_access_key_id TEXT NOT NULL,
 
