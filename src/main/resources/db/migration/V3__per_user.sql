@@ -45,6 +45,10 @@ CREATE TABLE credentials (
 
     CONSTRAINT chk_credentials_expiry
         CHECK (expires_at IS NULL OR expires_at > created_at)
+
+    -- One credential per dataset per user
+    CONSTRAINT uq_credentials_dataset_user
+        UNIQUE (dataset_id, user_id)
 );
 
 -- favorites indexes

@@ -1,12 +1,15 @@
 package se.kth.security;
 
 import jakarta.annotation.security.PermitAll;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
+
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import io.quarkus.security.Authenticated;
@@ -20,6 +23,8 @@ import se.kth.security.dto.UpdatePermissionsRequest;
 @Authenticated
 public class SecurityResource {
 
+    private static final String ADMIN_ROLE = "admin";
+
     @Inject
     JsonWebToken jwt;
 
@@ -27,15 +32,10 @@ public class SecurityResource {
     SecurityService securityService;
 
     @GET
+    @RolesAllowed(ADMIN_ROLE)
     public Response listUsers() {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
-
         try {
-            if (user.isInGroup("admin")) {
-                return Response.ok(securityService.listUsers()).build();
-            } else {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
-            }
+            return Response.ok(securityService.listUsers()).build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -48,7 +48,7 @@ public class SecurityResource {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
         try {
-            if (user.isInGroup("admin")) {
+            if (user.isInGroup(ADMIN_ROLE)) {
                 return Response.ok(securityService.getUser(id)).build();
             } else {
                 return Response.ok(securityService.getMyself(user)).build();
@@ -76,18 +76,13 @@ public class SecurityResource {
 
     @PUT
     @Path("{id}/dataset/{dataset_id}")
+    @RolesAllowed(ADMIN_ROLE)
     public Response updateUserPermissions(@PathParam("id") String id,
             @PathParam("dataset_id") String datasetId,
             @Valid UpdatePermissionsRequest req) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
-
         try {
-            if (user.isInGroup("admin")) {
-                securityService.updateUserPermissions(id, datasetId, req.accessLevel());
-                return Response.ok().build();
-            } else {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
-            }
+            securityService.updateUserPermissions(id, datasetId, req.accessLevel());
+            return Response.ok().build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -96,16 +91,11 @@ public class SecurityResource {
 
     @DELETE
     @Path("{id}")
+    @RolesAllowed(ADMIN_ROLE)
     public Response deleteUser(@PathParam("id") String id) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
-
         try {
-            if (user.isInGroup("admin")) {
-                securityService.deleteUser(id);
-                return Response.ok().build();
-            } else {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
-            }
+            securityService.deleteUser(id);
+            return Response.ok().build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -122,7 +112,7 @@ public class SecurityResource {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
         try {
-            if (user.isInGroup("admin")) {
+            if (user.isInGroup(ADMIN_ROLE)) {
                 return Response.ok(securityService.listGroups()).build();
             } else {
                 return Response.ok(securityService.listMyGroups(user)).build();
@@ -139,7 +129,7 @@ public class SecurityResource {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
         try {
-            if (user.isInGroup("admin")) {
+            if (user.isInGroup(ADMIN_ROLE)) {
                 return Response.ok(securityService.getGroup(id)).build();
             } else {
                 return Response.ok(securityService.getGroupIfMember(id, user)).build();
@@ -152,15 +142,10 @@ public class SecurityResource {
 
     @POST
     @Path("groups")
+    @RolesAllowed(ADMIN_ROLE)
     public Response createGroup(@Valid CreateGroupRequest req) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
-
         try {
-            if (user.isInGroup("admin")) {
-                return Response.ok(securityService.createGroup(req)).build();
-            } else {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
-            }
+            return Response.ok(securityService.createGroup(req)).build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -169,18 +154,13 @@ public class SecurityResource {
 
     @PUT
     @Path("groups/{id}/dataset/{dataset_id}")
+    @RolesAllowed(ADMIN_ROLE)
     public Response updateGroupPermissions(@PathParam("id") String id,
             @PathParam("dataset_id") String datasetId,
             @Valid UpdatePermissionsRequest req) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
-
         try {
-            if (user.isInGroup("admin")) {
-                securityService.updateGroupPermissions(id, datasetId, req.accessLevel());
-                return Response.ok().build();
-            } else {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
-            }
+            securityService.updateGroupPermissions(id, datasetId, req.accessLevel());
+            return Response.ok().build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -189,16 +169,11 @@ public class SecurityResource {
 
     @DELETE
     @Path("groups/{id}")
+    @RolesAllowed(ADMIN_ROLE)
     public Response deleteGroups(@PathParam("id") String id) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
-
         try {
-            if (user.isInGroup("admin")) {
-                securityService.deleteGroup(id);
-                return Response.ok().build();
-            } else {
-                return Response.status(Response.Status.UNAUTHORIZED).build();
-            }
+            securityService.deleteGroup(id);
+            return Response.ok().build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();

@@ -77,4 +77,10 @@ public class Credential {
         updatedAt = OffsetDateTime.now();
     }
 
+    public boolean expired() {
+        if (expiresAt == null)
+            return false; // Never expires
+        return expiresAt.isBefore(OffsetDateTime.now());
+    }
+
 }

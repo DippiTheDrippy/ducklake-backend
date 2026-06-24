@@ -21,6 +21,7 @@ import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import se.kth.common.PostgresAdminException;
 import se.kth.postgres.util.PostgreSql;
+import se.kth.security.AccessLevel;
 
 @Slf4j
 @ApplicationScoped
@@ -32,50 +33,47 @@ public class PostgresUserRepository {
     @Inject
     PostgresAdminRepository postgresAdminRepository;
 
-    @ConfigProperty(name = "app.ducklake.catalog.host")
-    String credentialsHost;
+    public String rotateUserPassword(String username, OffsetDateTime validUntil, boolean neverExpires) {
+        String password = UUID.randomUUID().toString();
 
-    @ConfigProperty(name = "app.ducklake.catalog.port", defaultValue = "5432")
-    int credentialsPort;
+        refreshPassword(username, password, validUntil, neverExpires);
+        return password;
+    }
 
-    public DbCredentials createReadOnlyUser(String database, OffsetDateTime validUntil) {
+    public DbCredentials createReadOnlyUser(String database, OffsetDateTime validUntil, boolean neverExpires) {
         PostgreSql.validateIdentifier(database);
 
         ensureDatasetAccessRoles(database);
 
         String username = randomUsername("ro");
-        String password = UUID.randomUUID().toString().replace("-", "");
+        String password = UUID.randomUUID().toString();
 
-        createloginRole(username, password, validUntil);
+        createloginRole(username, password, validUntil, neverExpires);
         grantMembership(PostgreSql.readerGroupRole(database), username);
 
         return new DbCredentials(
                 username,
                 password,
-                credentialsHost,
-                credentialsPort,
                 database,
-                "read");
+                AccessLevel.READ);
     }
 
-    public DbCredentials createReadWriteUser(String database, OffsetDateTime validUntil) {
+    public DbCredentials createReadWriteUser(String database, OffsetDateTime validUntil, boolean neverExpires) {
         PostgreSql.validateIdentifier(database);
 
         ensureDatasetAccessRoles(database);
 
         String username = randomUsername("rw");
-        String password = UUID.randomUUID().toString().replace("-", "");
+        String password = UUID.randomUUID().toString();
 
-        createloginRole(username, password, validUntil);
+        createloginRole(username, password, validUntil, neverExpires);
         grantMembership(PostgreSql.writerGroupRole(database), username);
 
         return new DbCredentials(
                 username,
                 password,
-                credentialsHost,
-                credentialsPort,
                 database,
-                "readwrite");
+                AccessLevel.WRITE);
     }
 
     public void revokeAccess(String username, String readerRole, String writerRole) {
@@ -255,14 +253,17 @@ public class PostgresUserRepository {
         }
     }
 
-    private void createloginRole(String username, String password, OffsetDateTime validUntil) {
+    private void createloginRole(String username, String password, OffsetDateTime validUntil, boolean neverExpires) {
         PostgreSql.validateTemporaryUsername(username);
+
+        String validUntilSql = neverExpires ? ""
+                : "VALID UNTIL " + PostgreSql.stringLiteral(validUntil.toString());
 
         executeClusterDdl("""
                 CREATE ROLE %s
                 logIN
                 PASSWORD %s
-                VALID UNTIL %s
+                %s
                 NOSUPERUSER
                 NOCREATEDB
                 NOCREATEROLE
@@ -271,7 +272,23 @@ public class PostgresUserRepository {
                 """.formatted(
                 PostgreSql.temporaryUsername(username),
                 PostgreSql.stringLiteral(password),
-                PostgreSql.stringLiteral(validUntil.toString())));
+                PostgreSql.stringLiteral(validUntilSql)));
+    }
+
+    private void refreshPassword(String username, String password, OffsetDateTime validUntil, boolean neverExpires) {
+        PostgreSql.validateTemporaryUsername(username);
+
+        String validUntilSql = neverExpires ? ""
+                : "VALID UNTIL " + PostgreSql.stringLiteral(validUntil.toString());
+
+        executeClusterDdl("""
+                ALTER ROLE %s
+                WITH PASSWORD %s
+                %s
+                """.formatted(
+                PostgreSql.temporaryUsername(username),
+                PostgreSql.stringLiteral(password),
+                PostgreSql.stringLiteral(validUntilSql)));
     }
 
     private void grantMembership(String groupRole, String username) {
@@ -301,16 +318,14 @@ public class PostgresUserRepository {
     }
 
     private String randomUsername(String mode) {
-        return "dl_" + mode + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 20);
+        return "dl_" + mode + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 50);
     }
 
     public record DbCredentials(
             String username,
             String password,
-            String credentialsHost,
-            int credentialsPort,
             String database,
-            String mode) {
+            AccessLevel mode) {
     }
 
 }

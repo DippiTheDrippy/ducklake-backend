@@ -1,5 +1,6 @@
 package se.kth.admin;
 
+import io.quarkus.security.Authenticated;
 import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.annotation.security.PermitAll;
@@ -24,8 +25,10 @@ import se.kth.security.KeycloakUser;
 @Path("api/admin")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-@RolesAllowed("admin")
+@Authenticated
 public class AdminResource {
+
+    private static final String ADMIN_ROLE = "admin";
 
     @Inject
     JsonWebToken jwt;
@@ -35,6 +38,7 @@ public class AdminResource {
 
     @POST
     @Path("datasets")
+    @RolesAllowed(ADMIN_ROLE)
     public Response createEmptyDataset(CreateDatasetRequest req) {
         try {
             return Response.ok(adminService.createEmptyDataset(req)).build();
@@ -48,6 +52,7 @@ public class AdminResource {
     @POST
     @Path("datasets/file")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @RolesAllowed(ADMIN_ROLE)
     public Response createDatasetFromFile(
             CreateDatasetMultipartRequest req) {
         try {
@@ -62,6 +67,7 @@ public class AdminResource {
     @POST
     @Path("datasets/append/{id}")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @RolesAllowed(ADMIN_ROLE)
     public Response createDatasetFromFile(
             @PathParam("id") String id,
             @RestForm("file") FileUpload file) {
@@ -77,6 +83,7 @@ public class AdminResource {
 
     @PUT
     @Path("datasets/{id}")
+    @RolesAllowed(ADMIN_ROLE)
     public Response updateDataset(@PathParam("id") String id,
             UpdateDatasetRequest req) {
         try {
@@ -91,6 +98,7 @@ public class AdminResource {
 
     @DELETE
     @Path("datasets/{id}")
+    @RolesAllowed(ADMIN_ROLE)
     public Response deleteDataset(@PathParam("id") String id) {
         try {
             adminService.deleteDataset(id);

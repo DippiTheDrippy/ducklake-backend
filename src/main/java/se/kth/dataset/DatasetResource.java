@@ -5,11 +5,14 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response.Status;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import io.quarkus.security.Authenticated;
+import io.quarkus.security.UnauthorizedException;
 import se.kth.credential.CredentialService;
+import se.kth.dataset.dto.CreateCredentialRequest;
 import se.kth.security.KeycloakUser;
 
 @Slf4j
@@ -18,6 +21,8 @@ import se.kth.security.KeycloakUser;
 @Consumes(MediaType.APPLICATION_JSON)
 @Authenticated
 public class DatasetResource {
+
+    private static final String ADMIN_ROLE = "admin";
 
     @Inject
     JsonWebToken jwt;
@@ -33,7 +38,7 @@ public class DatasetResource {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
         try {
-            if (user.isInGroup("admin")) {
+            if (user.isInGroup(ADMIN_ROLE)) {
                 return Response.ok(datasetService.listDatasets()).build();
             } else {
                 return Response.ok(datasetService.listUserDatasets(user)).build();
@@ -50,7 +55,7 @@ public class DatasetResource {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
         try {
-            if (user.isInGroup("admin")) {
+            if (user.isInGroup(ADMIN_ROLE)) {
                 return Response.ok(datasetService.getDataset(id)).build();
             } else {
                 return Response.ok(datasetService.getDatasetForUser(id, user)).build();
@@ -73,27 +78,81 @@ public class DatasetResource {
     }
 
     @GET
+    @Path("credentials")
+    public Response listMyCredentials() {
+        KeycloakUser user = KeycloakUser.fromToken(jwt);
+
+        try {
+            return Response.ok(credentialService.listUserCredentials(user.email())).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
+
+    @GET
     @Path("{id}/credentials")
-    public Response getCredentials(@PathParam("id") String id) {
-        return Response.noContent().build();
+    public Response getDatasetCredential(@PathParam("id") String id) {
+        KeycloakUser user = KeycloakUser.fromToken(jwt);
+
+        try {
+            return Response.ok(credentialService.getDatasetCredential(id, user.email())).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
     }
 
     @POST
     @Path("{id}/credentials")
-    public Response createCredentials(@PathParam("id") String id) {
-        return Response.noContent().build();
+    public Response createDatasetCredentials(
+            @PathParam("id") String id,
+            CreateCredentialRequest req) {
+        KeycloakUser user = KeycloakUser.fromToken(jwt);
+
+        try {
+            credentialService.createCredential(id, user.email(), req);
+            return Response.ok().build();
+        } catch (UnauthorizedException e) {
+            return Response.status(Status.UNAUTHORIZED).entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
     }
 
     @POST
-    @Path("{id}/credentials/{credential_id}/rotate")
-    public Response rotateCredentials(@PathParam("id") String id, @PathParam("credential_id") String credentialId) {
-        return Response.noContent().build();
+    @Path("credentials/{id}/rotate")
+    public Response rotateDatasetCredentials(@PathParam("id") String id) {
+        KeycloakUser user = KeycloakUser.fromToken(jwt);
+
+        try {
+            credentialService.rotateCredential(id, user.email());
+            return Response.ok().build();
+        } catch (BadRequestException e) {
+            return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (UnauthorizedException e) {
+            return Response.status(Status.UNAUTHORIZED).entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
     }
 
     @POST
-    @Path("{id}/credentials/{credential_id}")
-    public Response deleteCredentials(@PathParam("id") String id, @PathParam("credential_id") String credentialId) {
-        return Response.noContent().build();
+    @Path("credentials/{id}")
+    public Response deleteCredentials(@PathParam("id") String id) {
+        KeycloakUser user = KeycloakUser.fromToken(jwt);
+
+        try {
+            credentialService.deleteCredential(id, user.email());
+            return Response.ok().build();
+        } catch (UnauthorizedException e) {
+            return Response.status(Status.UNAUTHORIZED).entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
     }
 
 }

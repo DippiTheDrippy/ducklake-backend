@@ -5,6 +5,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +20,10 @@ public class CredentialRepository implements PanacheRepositoryBase<Credential, U
         return list("datasetId", datasetId);
     }
 
+    public List<Credential> listByUser(UUID userId) {
+        return list("userId", userId);
+    }
+
     public boolean existsByEmail(UUID datasetId) {
         return findByDataset(datasetId).isPresent();
     }
@@ -30,19 +35,12 @@ public class CredentialRepository implements PanacheRepositoryBase<Credential, U
     }
 
     @Transactional
-    public Credential upsertByDataset(UUID datasetId) {
-        Optional<Credential> existingCred = findByDataset(datasetId);
-
-        if (existingCred.isPresent()) {
-            Credential cred = existingCred.get();
-            // Rotate secrets
-            return cred;
-        }
-
-        // Set secrets in constructor
-        Credential cred = new Credential();
-        persist(cred);
+    public Credential rotate(String id) {
+        Credential cred = findByIdOptional(UUID.fromString(id))
+                .orElseThrow(() -> new NoSuchElementException("No such credential exists!"));
+        // Rotate secrets
         return cred;
+
     }
 
     @Transactional
