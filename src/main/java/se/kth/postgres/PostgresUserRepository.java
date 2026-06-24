@@ -15,7 +15,7 @@ import java.util.UUID;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import io.agroal.pool.DataSource;
+import io.agroal.api.AgroalDataSource;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -27,21 +27,18 @@ import se.kth.postgres.util.PostgreSql;
 public class PostgresUserRepository {
 
     @Inject
-    DataSource dataSource;
+    AgroalDataSource dataSource;
 
     @Inject
     PostgresAdminRepository postgresAdminRepository;
 
-    @ConfigProperty(name = "ducklake.postgres.credentials-host")
+    @ConfigProperty(name = "app.ducklake.catalog.host")
     String credentialsHost;
 
-    @ConfigProperty(name = "ducklake.postgres.credentials-port", defaultValue = "5432")
+    @ConfigProperty(name = "app.ducklake.catalog.port", defaultValue = "5432")
     int credentialsPort;
 
-    @ConfigProperty(name = "ducklake.postgres.token-ttl", defaultValue = "PT1H")
-    Duration tokenTtl;
-
-    public DbCredentials createReadOnlyUser(String database) {
+    public DbCredentials createReadOnlyUser(String database, OffsetDateTime validUntil) {
         PostgreSql.validateIdentifier(database);
 
         ensureDatasetAccessRoles(database);
@@ -49,7 +46,7 @@ public class PostgresUserRepository {
         String username = randomUsername("ro");
         String password = UUID.randomUUID().toString().replace("-", "");
 
-        createloginRole(username, password);
+        createloginRole(username, password, validUntil);
         grantMembership(PostgreSql.readerGroupRole(database), username);
 
         return new DbCredentials(
@@ -61,7 +58,7 @@ public class PostgresUserRepository {
                 "read");
     }
 
-    public DbCredentials createReadWriteUser(String database) {
+    public DbCredentials createReadWriteUser(String database, OffsetDateTime validUntil) {
         PostgreSql.validateIdentifier(database);
 
         ensureDatasetAccessRoles(database);
@@ -69,7 +66,7 @@ public class PostgresUserRepository {
         String username = randomUsername("rw");
         String password = UUID.randomUUID().toString().replace("-", "");
 
-        createloginRole(username, password);
+        createloginRole(username, password, validUntil);
         grantMembership(PostgreSql.writerGroupRole(database), username);
 
         return new DbCredentials(
@@ -81,13 +78,7 @@ public class PostgresUserRepository {
                 "readwrite");
     }
 
-    public void deleteUser(String username, String database) {
-        PostgreSql.validateTemporaryUsername(username);
-        PostgreSql.validateIdentifier(database);
-
-        String readerRole = PostgreSql.readerGroupRole(database);
-        String writerRole = PostgreSql.writerGroupRole(database);
-
+    public void revokeAccess(String username, String readerRole, String writerRole) {
         try {
             executeClusterDdl("""
                     REVOKE %s FROM %s
@@ -107,8 +98,38 @@ public class PostgresUserRepository {
         } catch (Exception e) {
             log.warn("Failed to revoke writer role from " + username);
         }
+    }
+
+    public void deleteUser(String username, String database) {
+        PostgreSql.validateTemporaryUsername(username);
+        PostgreSql.validateIdentifier(database);
+
+        String readerRole = PostgreSql.readerGroupRole(database);
+        String writerRole = PostgreSql.writerGroupRole(database);
+
+        revokeAccess(username, readerRole, writerRole);
 
         executeClusterDdl("DROP ROLE IF EXISTS " + PostgreSql.temporaryUsername(username));
+    }
+
+    public void dropUsersFromDataset(String database, List<String> users) {
+        PostgreSql.validateIdentifier(database);
+
+        String readerRole = PostgreSql.readerGroupRole(database);
+        String writerRole = PostgreSql.writerGroupRole(database);
+
+        for (String username : users) {
+            revokeAccess(username, readerRole, writerRole);
+            executeClusterDdl("DROP ROLE IF EXISTS " + PostgreSql.temporaryUsername(username));
+        }
+
+        executeClusterDdl("""
+                DROP ROLE IF EXISTS %s
+                """.formatted(PostgreSql.identifier(readerRole)));
+
+        executeClusterDdl("""
+                DROP ROLE IF EXISTS %s
+                """.formatted(PostgreSql.identifier(writerRole)));
     }
 
     /**
@@ -175,38 +196,38 @@ public class PostgresUserRepository {
         String reader = PostgreSql.identifier(readerRole);
         String writer = PostgreSql.identifier(writerRole);
 
-        postgresAdminRepository.withDatabaseConnection(database, connection -> {
-            try (Statement statement = connection.createStatement()) {
-                statement.execute("""
+        postgresAdminRepository.withDatabaseConnection(database, conn -> {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("""
                         GRANT USAGE
                         ON SCHEMA public
                         TO %s
                         """.formatted(reader));
 
-                statement.execute("""
+                stmt.execute("""
                         GRANT USAGE
                         ON SCHEMA public
                         TO %s
                         """.formatted(writer));
 
-                statement.execute("""
+                stmt.execute("""
                         GRANT SELECT
                         ON ALL TABLES IN SCHEMA public
                         TO %s
                         """.formatted(reader));
 
-                statement.execute("""
+                stmt.execute("""
                         GRANT SELECT, INSERT, UPDATE, DELETE
                         ON ALL TABLES IN SCHEMA public
                         TO %s
                         """.formatted(writer));
 
-                statement.execute("""
+                stmt.execute("""
                         ALTER DEFAULT PRIVILEGES IN SCHEMA public
                         GRANT SELECT ON TABLES TO %s
                         """.formatted(reader));
 
-                statement.execute("""
+                stmt.execute("""
                         ALTER DEFAULT PRIVILEGES IN SCHEMA public
                         GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %s
                         """.formatted(writer));
@@ -222,11 +243,11 @@ public class PostgresUserRepository {
         String sql = "SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = ?)";
 
         try (
-                Connection connection = dataSource.getConnection();
-                PreparedStatement statement = connection.prepareStatement(sql)) {
-            statement.setString(1, roleName);
+                Connection conn = dataSource.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, roleName);
 
-            try (var rs = statement.executeQuery()) {
+            try (var rs = stmt.executeQuery()) {
                 return rs.next() && rs.getBoolean(1);
             }
         } catch (SQLException e) {
@@ -234,12 +255,8 @@ public class PostgresUserRepository {
         }
     }
 
-    private void createloginRole(String username, String password) {
+    private void createloginRole(String username, String password, OffsetDateTime validUntil) {
         PostgreSql.validateTemporaryUsername(username);
-
-        OffsetDateTime validUntil = OffsetDateTime
-                .now()
-                .plus(tokenTtl);
 
         executeClusterDdl("""
                 CREATE ROLE %s

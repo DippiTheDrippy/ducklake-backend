@@ -3,7 +3,9 @@ package se.kth.dataset;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
+import se.kth.admin.dto.UpdateDatasetRequest;
 
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,18 +23,15 @@ public class DatasetRepository implements PanacheRepositoryBase<Dataset, UUID> {
     }
 
     @Transactional
-    public Dataset upsertByName(String name) {
-        Optional<Dataset> existingDataset = findByName(name);
+    public Dataset update(String id,
+            UpdateDatasetRequest req) {
+        Dataset dataset = findByIdOptional(UUID.fromString(id))
+                .orElseThrow(() -> new NoSuchElementException("Dataset does not exist!"));
 
-        if (existingDataset.isPresent()) {
-            Dataset dataset = existingDataset.get();
-            // set new stuffs
-            return dataset;
-        }
+        dataset.setDisplayName(req.display_name());
+        dataset.setDescription(req.description());
+        dataset.setPublic(req.is_public());
 
-        // set fields in constructor
-        Dataset dataset = new Dataset();
-        persist(dataset);
         return dataset;
     }
 

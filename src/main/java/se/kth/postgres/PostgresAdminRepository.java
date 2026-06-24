@@ -8,7 +8,7 @@ import java.sql.Statement;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
-import io.agroal.pool.DataSource;
+import io.agroal.api.AgroalDataSource;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -21,7 +21,7 @@ import se.kth.postgres.util.SqlConnectionWork;
 public class PostgresAdminRepository {
 
     @Inject
-    DataSource dataSource;
+    AgroalDataSource dataSource;
 
     @ConfigProperty(name = "quarkus.datasource.jdbc.url")
     String baseJdbcUrl;
@@ -40,7 +40,7 @@ public class PostgresAdminRepository {
         try (
                 Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, sql);
+            stmt.setString(1, database);
             try (var rs = stmt.executeQuery()) {
                 return rs.next() && rs.getBoolean(1);
             }
@@ -69,10 +69,10 @@ public class PostgresAdminRepository {
         }
     }
 
-    public void createDatabaseIfNotExists(String database) {
+    public void createDatabase(String database) {
         PostgreSql.validateIdentifier(database);
 
-        executeVoidQuery("CREATE DATABASE IF NOT EXISTS " + PostgreSql.identifier(database));
+        executeVoidQuery("CREATE DATABASE " + PostgreSql.identifier(database));
     }
 
     public void dropDatabaseIfExist(String database) {

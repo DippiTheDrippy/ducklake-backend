@@ -13,8 +13,6 @@ public class DucklakeSql {
     @ConfigProperty(name = "app.ducklake.catalog.alias", defaultValue = "lake")
     static String defaultCatalogAlias;
 
-    public static final String ROLLBACK_COMMAND = "ROLLBACK;";
-
     private DucklakeSql() {
     }
 
@@ -49,10 +47,12 @@ public class DucklakeSql {
 
     public static String createTableFromFile(String tableName, String path) {
         return """
-                CREATE TABLE %s FROM %s;
+                CREATE TABLE %s AS
+                SELECT * FROM %s(%s);
                 """.formatted(
                 identifier(tableName),
-                path);
+                determineReaderFromExtension(path),
+                quote(path));
     }
 
     public static String selectFromTable(String tableName, int limit, int offset) {
@@ -66,9 +66,10 @@ public class DucklakeSql {
 
     public static String insertFileIntoTable(String tableName, String path) {
         return """
-                INSERT INTO %s BY NAME SELECT * FROM %s;
+                INSERT INTO %s BY NAME SELECT * FROM %s(%s);
                 """.formatted(
                 identifier(tableName),
+                determineReaderFromExtension(path),
                 quote(path));
     }
 
@@ -120,14 +121,21 @@ public class DucklakeSql {
                 quote(identifier(tableName)));
     }
 
-    public static String transaction(String query) {
-        return """
-                BEGIN;
+    private static String determineReaderFromExtension(String path) {
+        String lower = path.toLowerCase();
 
-                %s
+        String reader;
+        if (lower.endsWith(".csv")) {
+            reader = "read_csv_auto";
+        } else if (lower.endsWith(".parquet")) {
+            reader = "read_parquet";
+        } else if (lower.endsWith(".json") || lower.endsWith(".ndjson")) {
+            reader = "read_json_auto";
+        } else {
+            throw new IllegalArgumentException("Unsupported file type: " + path);
+        }
 
-                END;
-                """.formatted(query);
+        return reader;
     }
 
 }

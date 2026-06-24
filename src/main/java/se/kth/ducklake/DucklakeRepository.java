@@ -32,10 +32,10 @@ public class DucklakeRepository {
                 args.database(), args.bucket(), args.garageKeyId(), args.garageSecret());
 
         try {
-            executor.execute(req, DucklakeSql.transaction(DucklakeSql.createTableFromFile(table, filePath)));
+            executor.executeInTransaction(req, DucklakeSql.createTableFromFile(table, filePath));
         } catch (SQLException e) {
-            executor.execute(req, DucklakeSql.ROLLBACK_COMMAND);
-            log.error(e.getMessage());
+            log.error("Failed to create DuckLake table '{}' from file '{}'", table, filePath, e);
+            throw e;
         }
     }
 
@@ -46,10 +46,10 @@ public class DucklakeRepository {
                 args.database(), args.bucket(), args.garageKeyId(), args.garageSecret());
 
         try {
-            executor.execute(req, DucklakeSql.transaction(DucklakeSql.dropTable(table)));
+            executor.executeInTransaction(req, DucklakeSql.dropTable(table));
         } catch (SQLException e) {
-            executor.execute(req, DucklakeSql.ROLLBACK_COMMAND);
-            log.error(e.getMessage());
+            log.error("Failed to drop DuckLake table '{}'", table, e);
+            throw e;
         }
     }
 
@@ -61,10 +61,10 @@ public class DucklakeRepository {
                 args.database(), args.bucket(), args.garageKeyId(), args.garageSecret());
 
         try {
-            executor.execute(req, DucklakeSql.transaction(DucklakeSql.insertFileIntoTable(table, filePath)));
+            executor.executeInTransaction(req, DucklakeSql.insertFileIntoTable(table, filePath));
         } catch (SQLException e) {
-            executor.execute(req, DucklakeSql.ROLLBACK_COMMAND);
-            log.error(e.getMessage());
+            log.error("Failed to insert '{}' into DuckLake table '{}'", filePath, table, e);
+            throw e;
         }
     }
 
@@ -90,10 +90,9 @@ public class DucklakeRepository {
                             rs.getLong("count"),
                             rs.getFloat("null_percentage")));
         } catch (SQLException e) {
-            executor.execute(req, DucklakeSql.ROLLBACK_COMMAND);
-            log.error(e.getMessage());
+            log.error("Failed to query summary from DuckLake table '{}'", table, e);
+            throw e;
         }
-        return new ArrayList<>();
     }
 
     public Optional<Long> totalRowCount(
@@ -108,10 +107,9 @@ public class DucklakeRepository {
                     },
                     rs -> rs.getLong("row_count"));
         } catch (SQLException e) {
-            executor.execute(req, DucklakeSql.ROLLBACK_COMMAND);
-            log.error(e.getMessage());
+            log.error("Failed to query total row count from DuckLake table '{}'", table, e);
+            throw e;
         }
-        return Optional.empty();
     }
 
     public Optional<Long> tableByteSize(
@@ -126,10 +124,9 @@ public class DucklakeRepository {
                     },
                     rs -> rs.getLong("file_size_bytes"));
         } catch (SQLException e) {
-            executor.execute(req, DucklakeSql.ROLLBACK_COMMAND);
-            log.error(e.getMessage());
+            log.error("Failed to query table byte size from DuckLake table '{}'", table, e);
+            throw e;
         }
-        return Optional.empty();
     }
 
     public record ConnectionArgs(

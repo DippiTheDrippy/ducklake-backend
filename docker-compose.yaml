@@ -1,26 +1,15 @@
 services:
-  db:
-    image: postgres:15-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: backend_db
-    volumes:
-      - db_data:/var/lib/postgresql/data
-
-  ducklake:
-    image: postgres:15-alpine
-    ports:
-      - "5433:5432"
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: catalog
-    volumes:
-      - ducklake_data:/var/lib/postgresql/data
+    db:
+        image: postgres:15-alpine
+        ports:
+            - "5432:5432"
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: backend_db
+        volumes:
+            - db_data:/var/lib/postgresql/data
 
 volumes:
-  db_data:
-  ducklake_data:
+    db_data:
+    ducklake_data:

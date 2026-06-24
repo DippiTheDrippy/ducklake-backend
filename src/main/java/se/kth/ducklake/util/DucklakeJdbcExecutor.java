@@ -86,6 +86,19 @@ public class DucklakeJdbcExecutor {
         return Optional.of(rows.getFirst());
     }
 
+    public void executeInTransaction(
+            DucklakeConnectionRequest request,
+            String sql) throws SQLException {
+
+        inTransaction(request, conn -> {
+            try (Statement st = conn.createStatement()) {
+                st.execute(sql);
+            }
+
+            return null;
+        });
+    }
+
     public <T> T inTransaction(
             DucklakeConnectionRequest request,
             SqlWork<T> work) throws SQLException {

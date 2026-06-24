@@ -8,6 +8,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+
+import io.quarkus.security.Authenticated;
 import se.kth.security.dto.CreateGroupRequest;
 import se.kth.security.dto.UpdatePermissionsRequest;
 
@@ -15,6 +17,7 @@ import se.kth.security.dto.UpdatePermissionsRequest;
 @Path("api/security")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Authenticated
 public class SecurityResource {
 
     @Inject
@@ -24,7 +27,6 @@ public class SecurityResource {
     SecurityService securityService;
 
     @GET
-    @PermitAll
     public Response listUsers() {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
@@ -42,7 +44,6 @@ public class SecurityResource {
 
     @GET
     @Path("{id}")
-    @PermitAll
     public Response getUser(@PathParam("id") String id) {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
@@ -60,7 +61,6 @@ public class SecurityResource {
 
     @POST
     @Path("register")
-    @PermitAll
     public Response register() {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
@@ -76,10 +76,9 @@ public class SecurityResource {
 
     @PUT
     @Path("{id}/dataset/{dataset_id}")
-    @PermitAll
     public Response updateUserPermissions(@PathParam("id") String id,
-                                          @PathParam("dataset_id") String datasetId,
-                                          @Valid UpdatePermissionsRequest req) {
+            @PathParam("dataset_id") String datasetId,
+            @Valid UpdatePermissionsRequest req) {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
         try {
@@ -97,7 +96,6 @@ public class SecurityResource {
 
     @DELETE
     @Path("{id}")
-    @PermitAll
     public Response deleteUser(@PathParam("id") String id) {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
@@ -120,7 +118,6 @@ public class SecurityResource {
 
     @GET
     @Path("groups")
-    @PermitAll
     public Response listGroups() {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
@@ -138,7 +135,6 @@ public class SecurityResource {
 
     @GET
     @Path("groups/{id}")
-    @PermitAll
     public Response getGroup(@PathParam("id") String id) {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
@@ -156,7 +152,6 @@ public class SecurityResource {
 
     @POST
     @Path("groups")
-    @PermitAll
     public Response createGroup(@Valid CreateGroupRequest req) {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
@@ -174,10 +169,9 @@ public class SecurityResource {
 
     @PUT
     @Path("groups/{id}/dataset/{dataset_id}")
-    @PermitAll
     public Response updateGroupPermissions(@PathParam("id") String id,
-                                           @PathParam("dataset_id") String datasetId,
-                                           @Valid UpdatePermissionsRequest req) {
+            @PathParam("dataset_id") String datasetId,
+            @Valid UpdatePermissionsRequest req) {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
         try {
@@ -195,7 +189,6 @@ public class SecurityResource {
 
     @DELETE
     @Path("groups/{id}")
-    @PermitAll
     public Response deleteGroups(@PathParam("id") String id) {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
@@ -211,6 +204,5 @@ public class SecurityResource {
             return Response.serverError().build();
         }
     }
-
 
 }

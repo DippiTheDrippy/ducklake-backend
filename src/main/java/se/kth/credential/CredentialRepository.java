@@ -4,6 +4,7 @@ import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -11,7 +12,11 @@ import java.util.UUID;
 public class CredentialRepository implements PanacheRepositoryBase<Credential, UUID> {
 
     public Optional<Credential> findByDataset(UUID datasetId) {
-        return find("dataset_id", datasetId).firstResultOptional();
+        return find("datasetId", datasetId).firstResultOptional();
+    }
+
+    public List<Credential> listByDataset(UUID datasetId) {
+        return list("datasetId", datasetId);
     }
 
     public boolean existsByEmail(UUID datasetId) {

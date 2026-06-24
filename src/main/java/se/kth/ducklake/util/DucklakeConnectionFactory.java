@@ -43,6 +43,12 @@ public class DucklakeConnectionFactory {
     @ConfigProperty(name = "app.ducklake.garage.use-ssl", defaultValue = "false")
     boolean defaultGarageUseSsl;
 
+    @ConfigProperty(name = "app.ducklake.local.enabled", defaultValue = "false")
+    boolean localModeEnabled;
+
+    @ConfigProperty(name = "app.ducklake.local.path", defaultValue = "ducklake_data/")
+    String localDataPath;
+
     public DucklakeConnectionRequest defaultConnectionRequest(
             String catalogDbName,
             String bucketName,
@@ -124,7 +130,9 @@ public class DucklakeConnectionFactory {
     }
 
     private void createSecrets(Connection conn, DucklakeConnectionRequest request) throws SQLException {
-        createGarageSecret(conn, request);
+        if (!localModeEnabled) {
+            createGarageSecret(conn, request);
+        }
         createPostgresSecret(conn, request);
     }
 
@@ -180,8 +188,17 @@ public class DucklakeConnectionFactory {
     }
 
     private void attachDucklake(Connection conn, DucklakeConnectionRequest request) throws SQLException {
-        String ducklakeUri = "ducklake:postgres:dbname=" + request.catalogDbName();
-        String dataPath = buildS3DataPath(request.bucketName());
+        String ducklakeUri = "ducklake:postgres:host=%s port=%d dbname=%s user=%s password=%s"
+                .formatted(
+                        request.catalogHost(),
+                        request.catalogPort(),
+                        request.catalogDbName(),
+                        request.catalogUsername(),
+                        request.catalogPassword());
+
+        String dataPath = localModeEnabled
+                ? localDataPath
+                : buildS3DataPath(request.bucketName());
 
         String sql = """
                 ATTACH %s AS %s

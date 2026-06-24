@@ -7,6 +7,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+
+import io.quarkus.security.Authenticated;
 import se.kth.credential.CredentialService;
 import se.kth.security.KeycloakUser;
 
@@ -14,6 +16,7 @@ import se.kth.security.KeycloakUser;
 @Path("api/datasets")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Authenticated
 public class DatasetResource {
 
     @Inject
@@ -26,7 +29,6 @@ public class DatasetResource {
     CredentialService credentialService;
 
     @GET
-    @PermitAll
     public Response listDatasets() {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
@@ -44,7 +46,6 @@ public class DatasetResource {
 
     @GET
     @Path("{id}")
-    @PermitAll
     public Response getDataset(@PathParam("id") String id) {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
@@ -67,35 +68,30 @@ public class DatasetResource {
 
     @POST
     @Path("{id}")
-    @PermitAll
     public Response favoriteDataset(@PathParam("id") String id) {
         return Response.noContent().build();
     }
 
     @GET
     @Path("{id}/credentials")
-    @PermitAll
     public Response getCredentials(@PathParam("id") String id) {
         return Response.noContent().build();
     }
 
     @POST
     @Path("{id}/credentials")
-    @PermitAll
     public Response createCredentials(@PathParam("id") String id) {
         return Response.noContent().build();
     }
 
     @POST
     @Path("{id}/credentials/{credential_id}/rotate")
-    @PermitAll
     public Response rotateCredentials(@PathParam("id") String id, @PathParam("credential_id") String credentialId) {
         return Response.noContent().build();
     }
 
     @POST
     @Path("{id}/credentials/{credential_id}")
-    @PermitAll
     public Response deleteCredentials(@PathParam("id") String id, @PathParam("credential_id") String credentialId) {
         return Response.noContent().build();
     }
