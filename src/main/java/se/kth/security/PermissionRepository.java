@@ -20,8 +20,9 @@ public class PermissionRepository {
    * Lists all datasets the user can access, either because the dataset is public
    * or because the user has direct/group-based READ or WRITE access.
    */
+  @SuppressWarnings("unchecked")
   public List<Dataset> findAccessibleDatasets(UUID userId, int limit, int offset) {
-    var result = entityManager
+    return entityManager
         .createNativeQuery("""
             SELECT DISTINCT d.*
             FROM datasets d
@@ -51,14 +52,13 @@ public class PermissionRepository {
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();
-
-    return result;
   }
 
   /**
    * Finds a dataset if the user has access to it, either because it is public
    * or because the user has direct/group-based READ or WRITE access.
    */
+  @SuppressWarnings("unchecked")
   public Optional<Dataset> findAccessibleDataset(UUID userId, UUID datasetId) {
     List<Dataset> result = entityManager
         .createNativeQuery("""

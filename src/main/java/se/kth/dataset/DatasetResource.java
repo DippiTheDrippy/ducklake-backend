@@ -13,6 +13,7 @@ import io.quarkus.security.Authenticated;
 import io.quarkus.security.UnauthorizedException;
 import se.kth.credential.CredentialService;
 import se.kth.dataset.dto.CreateCredentialRequest;
+import se.kth.favorite.FavoriteService;
 import se.kth.security.KeycloakUser;
 
 @Slf4j
@@ -32,6 +33,9 @@ public class DatasetResource {
 
     @Inject
     CredentialService credentialService;
+
+    @Inject
+    FavoriteService favoriteService;
 
     @GET
     public Response listDatasets() {
@@ -67,15 +71,61 @@ public class DatasetResource {
     }
 
     /*
-     * For user-specific things like favorites and credentials
-     * use the JWT token to extract unique identifier for user.
+     * FAVORITES
      */
 
-    @POST
-    @Path("{id}")
-    public Response favoriteDataset(@PathParam("id") String id) {
-        return Response.noContent().build();
+    @GET
+    @Path("favorite")
+    public Response listFavorites(
+            @QueryParam("limit") int limit,
+            @QueryParam("offset") int offset) {
+        KeycloakUser user = KeycloakUser.fromToken(jwt);
+
+        try {
+            return Response.ok(favoriteService.listFavoritedDatasets(user.email(), limit, offset)).build();
+        } catch (BadRequestException e) {
+            return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
     }
+
+    @POST
+    @Path("favorite/{id}")
+    public Response favoriteDataset(@PathParam("id") String id) {
+        KeycloakUser user = KeycloakUser.fromToken(jwt);
+
+        try {
+            favoriteService.addFavorite(id, user.email());
+            return Response.ok().build();
+        } catch (BadRequestException e) {
+            return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
+
+    @DELETE
+    @Path("favorite/{id}")
+    public Response unfavoriteDataset(@PathParam("id") String id) {
+        KeycloakUser user = KeycloakUser.fromToken(jwt);
+
+        try {
+            favoriteService.removeFavorite(id, user.email());
+            return Response.ok().build();
+        } catch (BadRequestException e) {
+            return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
+
+    /*
+     * DATASET CREDENTIALS
+     */
 
     @GET
     @Path("credentials")
