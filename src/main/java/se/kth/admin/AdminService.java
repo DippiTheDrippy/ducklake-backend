@@ -6,10 +6,10 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import se.kth.admin.dto.CreateDatasetRequest;
 import se.kth.admin.dto.UpdateDatasetRequest;
-import se.kth.common.DatasetAlreadyExistsException;
-import se.kth.common.DatasetCreationException;
-import se.kth.common.DatasetDeletionException;
-import se.kth.common.DatasetInsertionException;
+import se.kth.common.exceptions.DatasetAlreadyExistsException;
+import se.kth.common.exceptions.DatasetCreationException;
+import se.kth.common.exceptions.DatasetDeletionException;
+import se.kth.common.exceptions.DatasetInsertionException;
 import se.kth.credential.Credential;
 import se.kth.credential.CredentialRepository;
 import se.kth.dataset.Dataset;
@@ -241,7 +241,7 @@ public class AdminService {
 
             // Retrieve user-created credentials so we can delete their
             // postgres users and garage access keys
-            List<Credential> credentials = credentialRepository.listByDataset(d.getId());
+            List<Credential> credentials = credentialRepository.listAllByDataset(d.getId());
             List<String> keys = credentials.stream().map(c -> c.getGarageAccessKeyId()).toList();
             List<String> users = credentials.stream().map(c -> c.getPostgresUsername()).toList();
 

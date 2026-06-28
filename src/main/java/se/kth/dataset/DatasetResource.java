@@ -38,14 +38,14 @@ public class DatasetResource {
     FavoriteService favoriteService;
 
     @GET
-    public Response listDatasets() {
+    public Response listDatasets(@QueryParam("pageIndex") int pageIndex, @QueryParam("pageSize") int pageSize) {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
         try {
             if (user.isInGroup(ADMIN_ROLE)) {
-                return Response.ok(datasetService.listDatasets()).build();
+                return Response.ok(datasetService.listDatasets(pageIndex, pageSize)).build();
             } else {
-                return Response.ok(datasetService.listUserDatasets(user)).build();
+                return Response.ok(datasetService.listUserDatasets(user, pageIndex, pageSize)).build();
             }
         } catch (Exception e) {
             log.error(e.getMessage());
@@ -70,6 +70,26 @@ public class DatasetResource {
         }
     }
 
+    @GET
+    @Path("{id}")
+    public Response searchDatasets(
+            @QueryParam("search") String search,
+            @QueryParam("pageIndex") int pageIndex,
+            @QueryParam("pageSize") int pageSize) {
+        KeycloakUser user = KeycloakUser.fromToken(jwt);
+
+        try {
+            if (user.isInGroup(ADMIN_ROLE)) {
+                return Response.ok(datasetService.searchDatasets(search, pageIndex, pageSize)).build();
+            } else {
+                return Response.ok(datasetService.searchDatasetsForUser(search, user, pageIndex, pageSize)).build();
+            }
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
+
     /*
      * FAVORITES
      */
@@ -77,12 +97,12 @@ public class DatasetResource {
     @GET
     @Path("favorite")
     public Response listFavorites(
-            @QueryParam("limit") int limit,
-            @QueryParam("offset") int offset) {
+            @QueryParam("pageIndex") int pageIndex,
+            @QueryParam("pageSize") int pageSize) {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
         try {
-            return Response.ok(favoriteService.listFavoritedDatasets(user.email(), limit, offset)).build();
+            return Response.ok(favoriteService.listFavoritedDatasets(user.email(), pageIndex, pageSize)).build();
         } catch (BadRequestException e) {
             return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
         } catch (Exception e) {
@@ -129,11 +149,13 @@ public class DatasetResource {
 
     @GET
     @Path("credentials")
-    public Response listMyCredentials() {
+    public Response listMyCredentials(
+            @QueryParam("pageIndex") int pageIndex,
+            @QueryParam("pageSize") int pageSize) {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
         try {
-            return Response.ok(credentialService.listUserCredentials(user.email())).build();
+            return Response.ok(credentialService.listUserCredentials(user.email(), pageIndex, pageSize)).build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();

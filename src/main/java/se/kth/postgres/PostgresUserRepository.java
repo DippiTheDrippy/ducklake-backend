@@ -19,7 +19,7 @@ import io.agroal.api.AgroalDataSource;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
-import se.kth.common.PostgresAdminException;
+import se.kth.common.exceptions.PostgresAdminException;
 import se.kth.postgres.util.PostgreSql;
 import se.kth.security.AccessLevel;
 

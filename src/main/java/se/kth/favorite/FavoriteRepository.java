@@ -7,23 +7,36 @@ import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import io.quarkus.hibernate.orm.panache.PanacheRepositoryBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
+import se.kth.common.Pagination;
 import se.kth.dataset.Dataset;
 
 @ApplicationScoped
 public class FavoriteRepository implements PanacheRepositoryBase<Favorite, FavoriteId> {
 
     @SuppressWarnings("unchecked")
-    public List<Dataset> listFavortiedDatasets(UUID userId, int limit, int offset) {
-        return getEntityManager()
+    public Pagination<Dataset> listFavortiedDatasets(UUID userId, int pageIndex, int pageSize) {
+        Number totalItems = (Number) getEntityManager()
+                .createQuery("""
+                            SELECT COUNT(f.dataset)
+                            FROM favorites
+                            WHERE f.userId = :userId
+                        """)
+                .setParameter("userId", userId)
+                .getSingleResult();
+        long total = totalItems.longValue();
+
+        List<Dataset> datasets = getEntityManager()
                 .createQuery("""
                             SELECT f.dataset
                             FROM favorites
                             WHERE f.userId = :userId
                             ORDER BY f.createdAt DESC
                         """).setParameter("userId", userId)
-                .setFirstResult(offset)
-                .setMaxResults(limit)
+                .setFirstResult(pageIndex * pageSize)
+                .setMaxResults(pageSize)
                 .getResultList();
+
+        return new Pagination<>(datasets, pageIndex, pageSize, total);
     }
 
     public boolean isFavorited(UUID userId, UUID datasetId) {

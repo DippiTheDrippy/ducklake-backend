@@ -1,4 +1,4 @@
-package se.kth.common;
+package se.kth.common.exceptions;
 
 import java.sql.SQLException;
 

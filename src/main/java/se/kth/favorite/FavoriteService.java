@@ -6,6 +6,7 @@ import java.util.UUID;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
+import se.kth.common.Pagination;
 import se.kth.dataset.Dataset;
 import se.kth.security.user.User;
 import se.kth.security.user.UserRepository;
@@ -19,9 +20,9 @@ public class FavoriteService {
     @Inject
     FavoriteRepository favoriteRepository;
 
-    public List<Dataset> listFavoritedDatasets(String email, int limit, int offset) {
+    public Pagination<Dataset> listFavoritedDatasets(String email, int pageIndex, int pageSize) {
         User user = getUser(email);
-        return favoriteRepository.listFavortiedDatasets(user.getId(), limit, offset);
+        return favoriteRepository.listFavortiedDatasets(user.getId(), pageIndex, pageSize);
     }
 
     public void addFavorite(String id, String email) {

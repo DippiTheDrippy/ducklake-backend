@@ -1,4 +1,4 @@
-package se.kth.common;
+package se.kth.common.exceptions;
 
 public class DatasetAlreadyExistsException extends RuntimeException {
 
