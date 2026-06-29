@@ -4,6 +4,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import se.kth.common.Pagination;
 import se.kth.security.dto.CreateGroupRequest;
 import se.kth.security.group.Group;
 import se.kth.security.group.GroupRepository;
@@ -24,8 +25,8 @@ public class SecurityService {
     @Inject
     PermissionRepository permissionRepository;
 
-    public List<User> listUsers() {
-        return userRepository.listAll();
+    public Pagination<User> listUsers(int pageIndex, int pageSize) {
+        return userRepository.listAll(pageIndex, pageSize);
     }
 
     public User getUser(String id) {
@@ -47,8 +48,7 @@ public class SecurityService {
         permissionRepository.grantUserAccess(
                 UUID.fromString(datasetId),
                 UUID.fromString(id),
-                accessLevel
-        );
+                accessLevel);
     }
 
     public void deleteUser(String id) {
@@ -56,15 +56,15 @@ public class SecurityService {
             log.warn("Failed to delete user");
     }
 
-    public List<Group> listGroups() {
-        return groupRepository.listAll();
+    public Pagination<Group> listGroups(int pageIndex, int pageSize) {
+        return groupRepository.listAll(pageIndex, pageSize);
     }
 
-    public List<Group> listMyGroups(KeycloakUser kUser) {
+    public Pagination<Group> listMyGroups(KeycloakUser kUser, int pageIndex, int pageSize) {
         User user = userRepository.findByEmail(kUser.email())
                 .orElseThrow(() -> new IllegalArgumentException("User does not exist: " + kUser.email()));
 
-        return groupRepository.findGroupsForUser(user.getId());
+        return groupRepository.findGroupsForUser(user.getId(), pageIndex, pageSize);
     }
 
     public Group getGroup(String id) {
@@ -86,8 +86,7 @@ public class SecurityService {
         permissionRepository.grantGroupAccess(
                 UUID.fromString(datasetId),
                 UUID.fromString(id),
-                accessLevel
-        );
+                accessLevel);
     }
 
     public void deleteGroup(String id) {

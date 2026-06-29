@@ -33,9 +33,11 @@ public class SecurityResource {
 
     @GET
     @RolesAllowed(ADMIN_ROLE)
-    public Response listUsers() {
+    public Response listUsers(
+            @QueryParam("pageIndex") int pageIndex,
+            @QueryParam("pageSize") int pageSize) {
         try {
-            return Response.ok(securityService.listUsers()).build();
+            return Response.ok(securityService.listUsers(pageIndex, pageSize)).build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -108,14 +110,16 @@ public class SecurityResource {
 
     @GET
     @Path("groups")
-    public Response listGroups() {
+    public Response listGroups(
+            @QueryParam("pageIndex") int pageIndex,
+            @QueryParam("pageSize") int pageSize) {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
         try {
             if (user.isInGroup(ADMIN_ROLE)) {
-                return Response.ok(securityService.listGroups()).build();
+                return Response.ok(securityService.listGroups(pageIndex, pageSize)).build();
             } else {
-                return Response.ok(securityService.listMyGroups(user)).build();
+                return Response.ok(securityService.listMyGroups(user, pageIndex, pageSize)).build();
             }
         } catch (Exception e) {
             log.error(e.getMessage());
