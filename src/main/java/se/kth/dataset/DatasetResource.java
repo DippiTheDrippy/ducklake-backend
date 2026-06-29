@@ -211,7 +211,7 @@ public class DatasetResource {
         }
     }
 
-    @POST
+    @DELETE
     @Path("credentials/{id}")
     public Response deleteCredentials(@PathParam("id") String id) {
         KeycloakUser user = KeycloakUser.fromToken(jwt);

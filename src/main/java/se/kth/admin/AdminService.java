@@ -90,10 +90,10 @@ public class AdminService {
             // Persist dataset info
             Dataset d = new Dataset(
                     req.name(),
-                    req.display_name(),
+                    req.displayName(),
                     req.description(),
                     bucketName,
-                    req.is_public());
+                    req.isPublic());
 
             return datasetRepository.save(d);
 
@@ -155,10 +155,10 @@ public class AdminService {
             // Persist dataset info in backend database
             Dataset d = new Dataset(
                     req.name(),
-                    req.display_name(),
+                    req.displayName(),
                     req.description(),
                     bucketName,
-                    req.is_public());
+                    req.isPublic());
 
             return datasetRepository.save(d);
         } catch (Exception e) {

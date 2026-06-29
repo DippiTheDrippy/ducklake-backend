@@ -68,7 +68,7 @@ public class AdminResource {
     @Path("datasets/append/{id}")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @RolesAllowed(ADMIN_ROLE)
-    public Response createDatasetFromFile(
+    public Response appendDataFromFile(
             @PathParam("id") String id,
             @RestForm("file") FileUpload file) {
         try {

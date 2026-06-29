@@ -59,9 +59,9 @@ public class DatasetRepository implements PanacheRepositoryBase<Dataset, UUID> {
         Dataset dataset = findByIdOptional(UUID.fromString(id))
                 .orElseThrow(() -> new NoSuchElementException("Dataset does not exist!"));
 
-        dataset.setDisplayName(req.display_name());
+        dataset.setDisplayName(req.displayName());
         dataset.setDescription(req.description());
-        dataset.setPublic(req.is_public());
+        dataset.setPublic(req.isPublic());
 
         return dataset;
     }
