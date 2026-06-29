@@ -44,7 +44,7 @@ CREATE TABLE credentials (
             ON DELETE CASCADE,
 
     CONSTRAINT chk_credentials_expiry
-        CHECK (expires_at IS NULL OR expires_at > created_at)
+        CHECK (expires_at IS NULL OR expires_at > created_at),
 
     -- One credential per dataset per user
     CONSTRAINT uq_credentials_dataset_user

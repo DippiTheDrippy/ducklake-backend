@@ -71,7 +71,7 @@ public class DatasetResource {
     }
 
     @GET
-    @Path("{id}")
+    @Path("search")
     public Response searchDatasets(
             @QueryParam("search") String search,
             @QueryParam("pageIndex") int pageIndex,
