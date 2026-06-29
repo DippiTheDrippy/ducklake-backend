@@ -40,8 +40,8 @@ public class SecurityService {
                 .orElseThrow(() -> new IllegalArgumentException("User does not exist!"));
     }
 
-    public void register(KeycloakUser user) {
-        userRepository.upsertByEmail(user.email(), user.firstName(), user.lastName());
+    public User register(KeycloakUser user) {
+        return userRepository.upsertByEmail(user.email(), user.firstName(), user.lastName());
     }
 
     public void updateUserPermissions(String id, String datasetId, AccessLevel accessLevel) {

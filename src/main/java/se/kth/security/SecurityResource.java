@@ -67,13 +67,11 @@ public class SecurityResource {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
         try {
-            securityService.register(user);
+            return Response.ok(securityService.register(user)).build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
         }
-
-        return Response.ok().build();
     }
 
     @PUT

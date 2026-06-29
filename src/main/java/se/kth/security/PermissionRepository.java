@@ -59,7 +59,7 @@ public class PermissionRepository {
                       AND dgp.access_level IN ('READ', 'WRITE')
                 )
             )
-            """, Dataset.class)
+            """)
         .setParameter("userId", userId)
         .setParameter("pattern", pattern)
         .getSingleResult();
@@ -134,9 +134,7 @@ public class PermissionRepository {
                   AND ugm.user_id = :userId
                   AND dgp.access_level IN ('READ', 'WRITE')
             )
-
-            ORDER BY d.name
-            """, Dataset.class)
+            """)
         .setParameter("userId", userId)
         .getSingleResult();
     long total = totalItems.longValue();
