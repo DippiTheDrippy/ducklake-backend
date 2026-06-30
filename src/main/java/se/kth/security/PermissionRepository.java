@@ -37,6 +37,7 @@ public class PermissionRepository {
             WHERE (
                 d.name ILIKE :pattern
                 OR COALESCE(d.description, '') ILIKE :pattern
+                OR COALESCE(d.display_name, '') ILIKE :pattern
             )
             AND (
                 d.is_public = true
@@ -72,6 +73,7 @@ public class PermissionRepository {
             WHERE (
                 d.name ILIKE :pattern
                 OR COALESCE(d.description, '') ILIKE :pattern
+                OR COALESCE(d.display_name, '') ILIKE :pattern
             )
             AND (
                 d.is_public = true

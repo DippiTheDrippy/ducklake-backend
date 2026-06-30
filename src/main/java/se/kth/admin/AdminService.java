@@ -76,7 +76,7 @@ public class AdminService {
             throw new DatasetAlreadyExistsException("Dataset with that name already exists", null);
         }
 
-        String bucketName = UUID.randomUUID().toString();
+        String bucketName = "ducklake-cbh-" + UUID.randomUUID().toString();
 
         CreateBucketResponse bucket = null;
 
@@ -123,7 +123,7 @@ public class AdminService {
             throw new DatasetAlreadyExistsException("Dataset with that name already exists", null);
         }
 
-        String bucketName = "ducklake_cbh_" + UUID.randomUUID().toString();
+        String bucketName = "ducklake-cbh-" + UUID.randomUUID().toString();
         String keyName = "ducklake_cbh_" + UUID.randomUUID().toString();
 
         CreateBucketResponse bucket = null;

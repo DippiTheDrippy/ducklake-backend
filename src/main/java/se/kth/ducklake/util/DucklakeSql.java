@@ -31,7 +31,11 @@ public class DucklakeSql {
     }
 
     public static String quote(String value) {
-        return "'" + value + "'";
+        if (value == null) {
+            throw new IllegalArgumentException("SQL string literal cannot be null");
+        }
+
+        return "'" + value.replace("'", "''") + "'";
     }
 
     public static String commit(String author, String commitMessage) {
@@ -46,12 +50,23 @@ public class DucklakeSql {
     }
 
     public static String createTableFromFile(String tableName, String path) {
+        String type = determineFileType(path);
+
+        String reader;
+        if (type.equals("csv")) {
+            reader = "read_csv_auto";
+        } else if (type.equals("parquet")) {
+            reader = "read_parquet";
+        } else {
+            throw new IllegalArgumentException("Unsupported file type: " + path);
+        }
+
         return """
                 CREATE TABLE %s AS
                 SELECT * FROM %s(%s);
                 """.formatted(
                 identifier(tableName),
-                determineReaderFromExtension(path),
+                reader,
                 quote(path));
     }
 
@@ -65,11 +80,22 @@ public class DucklakeSql {
     }
 
     public static String insertFileIntoTable(String tableName, String path) {
+        String type = determineFileType(path);
+
+        String reader;
+        if (type.equals("csv")) {
+            reader = "read_csv_auto";
+        } else if (type.equals("parquet")) {
+            reader = "read_parquet";
+        } else {
+            throw new IllegalArgumentException("Unsupported file type: " + path);
+        }
+
         return """
                 INSERT INTO %s BY NAME SELECT * FROM %s(%s);
                 """.formatted(
                 identifier(tableName),
-                determineReaderFromExtension(path),
+                reader,
                 quote(path));
     }
 
@@ -121,21 +147,84 @@ public class DucklakeSql {
                 quote(identifier(tableName)));
     }
 
-    private static String determineReaderFromExtension(String path) {
+    public static String determineFileType(String path) {
         String lower = path.toLowerCase();
 
-        String reader;
         if (lower.endsWith(".csv")) {
-            reader = "read_csv_auto";
+            return "csv";
         } else if (lower.endsWith(".parquet")) {
-            reader = "read_parquet";
+            return "parquet";
         } else if (lower.endsWith(".json") || lower.endsWith(".ndjson")) {
-            reader = "read_json_auto";
+            return "json";
         } else {
             throw new IllegalArgumentException("Unsupported file type: " + path);
         }
-
-        return reader;
     }
 
+    public static String createTableFromFileJSON(String tableName, String filePath, String rowSourcePath,
+            String inferredRowShape) {
+        return createOrInsertJSON(tableName, filePath, rowSourcePath, inferredRowShape, true);
+    }
+
+    public static String insertFileIntoTableJSON(String tableName, String filePath, String rowSourcePath,
+            String inferredRowShape) {
+        return createOrInsertJSON(tableName, filePath, rowSourcePath, inferredRowShape, false);
+    }
+
+    private static String createOrInsertJSON(String tableName, String filePath, String rowSourcePath,
+            String inferredRowShape, boolean create) {
+        String str = """
+                SELECT
+                    unnest(
+                        from_json(
+                            json_extract(upload.json, %s),
+                            %s
+                        ),
+                        max_depth := 2
+                    )
+                FROM read_json_objects(
+                    %s,
+                    format = 'unstructured'
+                ) AS upload;
+                """.formatted(
+                quote(rowSourcePath),
+                quote(inferredRowShape),
+                quote(filePath));
+
+        if (create) {
+            return """
+                    CREATE OR REPLACE TABLE %s AS
+                    %s
+                    """.formatted(identifier(tableName), str);
+        } else {
+            return """
+                    INSERT INTO %s BY NAME
+                    %s
+                    """.formatted(identifier(tableName), str);
+        }
+    }
+
+    public static String findBestJsonArraySource(String filePath) {
+        return """
+                WITH upload AS (
+                    SELECT json
+                    FROM read_json_objects(
+                        %s,
+                        format = 'unstructured'
+                    )
+                )
+                SELECT
+                    fullkey AS row_source_path,
+                    json_array_length(value) AS row_count,
+                    json_type(value, '$[0]') AS first_item_type,
+                    json_structure(value) AS inferred_row_shape
+                FROM upload,
+                     json_tree(json)
+                WHERE type = 'ARRAY'
+                  AND json_type(value, '$[0]') = 'OBJECT'
+                  AND fullkey NOT LIKE '%%[%%'
+                ORDER BY row_count DESC
+                LIMIT 1;
+                """.formatted(quote(filePath));
+    }
 }

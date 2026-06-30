@@ -6,4 +6,8 @@ public class DatasetCreationException extends RuntimeException {
         super(message, cause);
     }
 
+    public DatasetCreationException(String message) {
+        super(message);
+    }
+
 }

@@ -36,7 +36,8 @@ public class DatasetRepository implements PanacheRepositoryBase<Dataset, UUID> {
 
         PanacheQuery<Dataset> query = find("""
                 lower(name) like ?1 or
-                lower(description) like ?1
+                lower(description) like ?1 or
+                lower(display_name) like ?1
                 """, pattern);
         long total = query.count();
 

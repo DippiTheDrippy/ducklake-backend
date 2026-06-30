@@ -8,6 +8,8 @@ import java.util.Optional;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
+import se.kth.common.exceptions.DatasetCreationException;
+import se.kth.ducklake.model.JsonSource;
 import se.kth.ducklake.model.TableSummary;
 import se.kth.ducklake.util.DucklakeConnectionFactory;
 import se.kth.ducklake.util.DucklakeJdbcExecutor;
@@ -32,7 +34,18 @@ public class DucklakeRepository {
                 args.database(), args.bucket(), args.garageKeyId(), args.garageSecret());
 
         try {
-            executor.executeInTransaction(req, DucklakeSql.createTableFromFile(table, filePath));
+            if (DucklakeSql.determineFileType(filePath).equals("json")) {
+                JsonSource source = executor.queryOne(req, DucklakeSql.findBestJsonArraySource(filePath),
+                        rs -> new JsonSource(
+                                rs.getString("row_source_path"),
+                                rs.getString("inferred_row_shape")))
+                        .orElseThrow(() -> new DatasetCreationException("Failed to find ideal json structure"));
+
+                executor.executeInTransaction(req, DucklakeSql.createTableFromFileJSON(table, filePath,
+                        source.rowSourcePath(), source.inferredRowShape()));
+            } else {
+                executor.executeInTransaction(req, DucklakeSql.createTableFromFile(table, filePath));
+            }
         } catch (SQLException e) {
             log.error("Failed to create DuckLake table '{}' from file '{}'", table, filePath, e);
             throw e;
@@ -61,7 +74,19 @@ public class DucklakeRepository {
                 args.database(), args.bucket(), args.garageKeyId(), args.garageSecret());
 
         try {
-            executor.executeInTransaction(req, DucklakeSql.insertFileIntoTable(table, filePath));
+            if (DucklakeSql.determineFileType(filePath).equals("json")) {
+                JsonSource source = executor.queryOne(req, DucklakeSql.findBestJsonArraySource(filePath),
+                        rs -> new JsonSource(
+                                rs.getString("row_source_path"),
+                                rs.getString("inferred_row_shape")))
+                        .orElseThrow(() -> new DatasetCreationException("Failed to find ideal json structure"));
+
+                executor.executeInTransaction(req, DucklakeSql.insertFileIntoTableJSON(table, filePath,
+                        source.rowSourcePath(), source.inferredRowShape()));
+            } else {
+                executor.executeInTransaction(req, DucklakeSql.insertFileIntoTable(table, filePath));
+            }
+
         } catch (SQLException e) {
             log.error("Failed to insert '{}' into DuckLake table '{}'", filePath, table, e);
             throw e;

@@ -71,6 +71,14 @@ public class DucklakeJdbcExecutor {
     public <T> Optional<T> queryOne(
             DucklakeConnectionRequest request,
             String sql,
+            RowMapper<T> mapper) throws SQLException {
+        return queryOne(request, sql, ps -> {
+        }, mapper);
+    }
+
+    public <T> Optional<T> queryOne(
+            DucklakeConnectionRequest request,
+            String sql,
             SqlBinder binder,
             RowMapper<T> mapper) throws SQLException {
         List<T> rows = query(request, sql, binder, mapper);
