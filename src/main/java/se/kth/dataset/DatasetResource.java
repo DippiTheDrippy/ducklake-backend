@@ -199,8 +199,8 @@ public class DatasetResource {
         KeycloakUser user = KeycloakUser.fromToken(jwt);
 
         try {
-            credentialService.rotateCredential(id, user.email());
-            return Response.ok().build();
+
+            return Response.ok(credentialService.rotateCredential(id, user.email())).build();
         } catch (BadRequestException e) {
             return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
         } catch (UnauthorizedException e) {

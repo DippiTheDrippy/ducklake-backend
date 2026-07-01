@@ -109,6 +109,8 @@ public class CredentialService {
                         return new CreateCredentialResponse(
                                         cred.getId(),
                                         req.access(),
+                                        d.getId(),
+                                        user.getId(),
                                         d.getName(),
                                         d.getBucketName(),
                                         dbCred.username(),
@@ -165,6 +167,8 @@ public class CredentialService {
                 return new CreateCredentialResponse(
                                 cred.getId(),
                                 AccessLevel.valueOf(cred.getAccessLevel()),
+                                d.getId(),
+                                user.getId(),
                                 d.getName(),
                                 d.getBucketName(),
                                 cred.getPostgresUsername(),
