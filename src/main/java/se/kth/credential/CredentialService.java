@@ -101,6 +101,7 @@ public class CredentialService {
                         Credential cred = new Credential(
                                         d.getId(),
                                         user.getId(),
+                                        req.name(),
                                         dbCred.username(),
                                         key.accessKeyId(),
                                         req.neverExpires() ? null : req.expiresAt());
@@ -109,6 +110,7 @@ public class CredentialService {
                         return new CreateCredentialResponse(
                                         cred.getId(),
                                         req.access(),
+                                        req.name(),
                                         d.getId(),
                                         user.getId(),
                                         d.getName(),
@@ -167,6 +169,7 @@ public class CredentialService {
                 return new CreateCredentialResponse(
                                 cred.getId(),
                                 AccessLevel.valueOf(cred.getAccessLevel()),
+                                cred.getName(),
                                 d.getId(),
                                 user.getId(),
                                 d.getName(),

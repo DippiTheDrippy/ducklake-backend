@@ -34,11 +34,7 @@ public class Group {
     private OffsetDateTime updatedAt;
 
     @ManyToMany
-    @JoinTable(
-            name = "user_group_members",
-            joinColumns = @JoinColumn(name = "group_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
+    @JoinTable(name = "user_group_members", joinColumns = @JoinColumn(name = "group_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
     private Set<User> users = new HashSet<>();
 
     public Group(String name, String displayName, String description) {

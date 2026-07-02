@@ -18,7 +18,7 @@ public class FavoriteRepository implements PanacheRepositoryBase<Favorite, Favor
         Number totalItems = (Number) getEntityManager()
                 .createQuery("""
                             SELECT COUNT(f.dataset)
-                            FROM favorites
+                            FROM Favorite f
                             WHERE f.userId = :userId
                         """)
                 .setParameter("userId", userId)
@@ -28,7 +28,7 @@ public class FavoriteRepository implements PanacheRepositoryBase<Favorite, Favor
         List<Dataset> datasets = getEntityManager()
                 .createQuery("""
                             SELECT f.dataset
-                            FROM favorites
+                            FROM Favorite f
                             WHERE f.userId = :userId
                             ORDER BY f.createdAt DESC
                         """).setParameter("userId", userId)

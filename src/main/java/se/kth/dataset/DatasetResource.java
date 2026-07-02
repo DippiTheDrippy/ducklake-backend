@@ -106,6 +106,7 @@ public class DatasetResource {
         } catch (BadRequestException e) {
             return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
         } catch (Exception e) {
+            e.printStackTrace();
             log.error(e.getMessage());
             return Response.serverError().build();
         }
@@ -122,6 +123,7 @@ public class DatasetResource {
         } catch (BadRequestException e) {
             return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
         } catch (Exception e) {
+            e.printStackTrace();
             log.error(e.getMessage());
             return Response.serverError().build();
         }
@@ -138,6 +140,7 @@ public class DatasetResource {
         } catch (BadRequestException e) {
             return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
         } catch (Exception e) {
+            e.printStackTrace();
             log.error(e.getMessage());
             return Response.serverError().build();
         }

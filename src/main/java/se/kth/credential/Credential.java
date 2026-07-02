@@ -23,6 +23,9 @@ public class Credential {
     @Column(name = "user_id", nullable = false)
     private UUID userId;
 
+    @Column(name = "name", nullable = false)
+    private String name;
+
     @Column(name = "access_level", nullable = false)
     private String accessLevel;
 
@@ -48,10 +51,11 @@ public class Credential {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    public Credential(UUID datasetId, UUID userId, String postgresUsername, String garageAccessKeyId,
+    public Credential(UUID datasetId, UUID userId, String name, String postgresUsername, String garageAccessKeyId,
             OffsetDateTime expiresAt) {
         this.datasetId = datasetId;
         this.userId = userId;
+        this.name = name;
         this.postgresUsername = postgresUsername;
         this.garageAccessKeyId = garageAccessKeyId;
         this.expiresAt = expiresAt;
