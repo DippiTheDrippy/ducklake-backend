@@ -22,7 +22,9 @@ import se.kth.postgres.PostgresUserRepository;
 import se.kth.postgres.PostgresUserRepository.DbCredentials;
 import se.kth.security.AccessLevel;
 import se.kth.security.PermissionRepository;
+import se.kth.security.keycloak.Group;
 import se.kth.security.keycloak.JwtUser;
+import se.kth.security.keycloak.KeycloakRepository;
 
 @ApplicationScoped
 public class CredentialService {
@@ -41,6 +43,9 @@ public class CredentialService {
 
         @Inject
         PermissionRepository permissionRepository;
+
+        @Inject
+        KeycloakRepository keycloakRepository;
 
         public Credential getDatasetCredential(JwtUser user, String datasetId) {
                 return credentialRepository.findByDatasetAndUser(UUID.fromString(datasetId), user.id()).orElse(null);
@@ -61,8 +66,13 @@ public class CredentialService {
                 Dataset d = datasetRepository.findByIdOptional(UUID.fromString(datasetId))
                                 .orElseThrow(() -> new NoSuchElementException("Connected dataset could not be found!"));
 
+                List<UUID> groupIds = keycloakRepository.getAllGroupsForUser(user.id().toString())
+                                .stream()
+                                .map(Group::getId)
+                                .toList();
+
                 // Does user have request access level to the dataset?
-                if (permissionRepository.hasAccessLevel(user.id(), d.getId(), req.access())) {
+                if (permissionRepository.hasAccessLevel(user.id(), groupIds, d.getId(), req.access())) {
                         // Create garage access key, access level is assigned below
                         String keyName = "ducklake_cbh_" + UUID.randomUUID().toString();
                         CreateBucketResponse bucket = garageRepository.getBucketByGlobalAlias(d.getBucketName());

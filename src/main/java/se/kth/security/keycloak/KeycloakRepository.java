@@ -96,6 +96,37 @@ public class KeycloakRepository {
         return searchGroupsForUser(userId, null, pageIndex, pageSize);
     }
 
+    public List<Group> getAllGroupsForUser(String userId) {
+        final int pageSize = 100;
+        int first = 0;
+
+        List<Group> allGroups = new java.util.ArrayList<>();
+
+        while (true) {
+            List<Group> groups = keycloakAdminClient.getGroupsForUser(
+                    realm,
+                    userId,
+                    first,
+                    pageSize,
+                    null,
+                    BRIEF_REPRESENTATION);
+
+            if (groups == null || groups.isEmpty()) {
+                break;
+            }
+
+            allGroups.addAll(groups);
+
+            if (groups.size() < pageSize) {
+                break;
+            }
+
+            first += pageSize;
+        }
+
+        return allGroups;
+    }
+
     public Pagination<Group> searchGroupsForUser(
             String userId,
             String search,

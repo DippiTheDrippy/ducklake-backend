@@ -8,7 +8,9 @@ import jakarta.transaction.Transactional;
 import se.kth.common.Pagination;
 import se.kth.dataset.Dataset;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,16 +20,19 @@ public class PermissionRepository {
   @Inject
   EntityManager entityManager;
 
+  private static final UUID emptyUUID = new UUID(0L, 0L);
+
   @SuppressWarnings("unchecked")
   public Pagination<Dataset> findAccessibleDatasetsBySearch(
       UUID userId,
+      List<UUID> groupIds,
       String search,
       int pageIndex,
       int pageSize) {
     if (search == null || search.isBlank()) {
-      return findAccessibleDatasets(userId, pageIndex, pageSize);
+      return findAccessibleDatasets(userId, groupIds, pageIndex, pageSize);
     }
-
+    boolean hasGroups = groupIds != null && !groupIds.isEmpty();
     String pattern = "%" + search.trim() + "%";
 
     Number totalItems = (Number) entityManager
@@ -53,16 +58,15 @@ public class PermissionRepository {
                 OR EXISTS (
                     SELECT 1
                     FROM dataset_group_permissions dgp
-                    JOIN user_group_members ugm
-                      ON ugm.group_id = dgp.group_id
                     WHERE dgp.dataset_id = d.id
-                      AND ugm.user_id = :userId
+                      AND dgp.group_id IN (:groupIds)
                       AND dgp.access_level IN ('READ', 'WRITE')
                 )
             )
             """)
         .setParameter("userId", userId)
         .setParameter("pattern", pattern)
+        .setParameter("groupIds", hasGroups ? groupIds : List.of(emptyUUID))
         .getSingleResult();
     long total = totalItems.longValue();
 
@@ -89,10 +93,8 @@ public class PermissionRepository {
                 OR EXISTS (
                     SELECT 1
                     FROM dataset_group_permissions dgp
-                    JOIN user_group_members ugm
-                      ON ugm.group_id = dgp.group_id
                     WHERE dgp.dataset_id = d.id
-                      AND ugm.user_id = :userId
+                      AND dgp.group_id IN (:groupIds)
                       AND dgp.access_level IN ('READ', 'WRITE')
                 )
             )
@@ -100,6 +102,7 @@ public class PermissionRepository {
             """, Dataset.class)
         .setParameter("userId", userId)
         .setParameter("pattern", pattern)
+        .setParameter("groupIds", hasGroups ? groupIds : List.of(emptyUUID))
         .setFirstResult(pageIndex * pageSize)
         .setMaxResults(pageSize)
         .getResultList();
@@ -112,7 +115,8 @@ public class PermissionRepository {
    * or because the user has direct/group-based READ or WRITE access.
    */
   @SuppressWarnings("unchecked")
-  public Pagination<Dataset> findAccessibleDatasets(UUID userId, int pageIndex, int pageSize) {
+  public Pagination<Dataset> findAccessibleDatasets(UUID userId, List<UUID> groupIds, int pageIndex, int pageSize) {
+    boolean hasGroups = groupIds != null && !groupIds.isEmpty();
     Number totalItems = (Number) entityManager
         .createNativeQuery("""
             SELECT COUNT(DISTINCT d.id)
@@ -130,14 +134,13 @@ public class PermissionRepository {
             OR EXISTS (
                 SELECT 1
                 FROM dataset_group_permissions dgp
-                JOIN user_group_members ugm
-                  ON ugm.group_id = dgp.group_id
                 WHERE dgp.dataset_id = d.id
-                  AND ugm.user_id = :userId
+                  AND dgp.group_id IN (:groupIds)
                   AND dgp.access_level IN ('READ', 'WRITE')
             )
             """)
         .setParameter("userId", userId)
+        .setParameter("groupIds", hasGroups ? groupIds : List.of(emptyUUID))
         .getSingleResult();
     long total = totalItems.longValue();
 
@@ -158,16 +161,15 @@ public class PermissionRepository {
             OR EXISTS (
                 SELECT 1
                 FROM dataset_group_permissions dgp
-                JOIN user_group_members ugm
-                  ON ugm.group_id = dgp.group_id
                 WHERE dgp.dataset_id = d.id
-                  AND ugm.user_id = :userId
+                  AND dgp.group_id IN (:groupIds)
                   AND dgp.access_level IN ('READ', 'WRITE')
             )
 
             ORDER BY d.name
             """, Dataset.class)
         .setParameter("userId", userId)
+        .setParameter("groupIds", hasGroups ? groupIds : List.of(emptyUUID))
         .setFirstResult(pageIndex * pageSize)
         .setMaxResults(pageSize)
         .getResultList();
@@ -180,7 +182,8 @@ public class PermissionRepository {
    * or because the user has direct/group-based READ or WRITE access.
    */
   @SuppressWarnings("unchecked")
-  public Optional<Dataset> findAccessibleDataset(UUID userId, UUID datasetId) {
+  public Optional<Dataset> findAccessibleDataset(UUID userId, List<UUID> groupIds, UUID datasetId) {
+    boolean hasGroups = groupIds != null && !groupIds.isEmpty();
     List<Dataset> result = entityManager
         .createNativeQuery("""
             SELECT DISTINCT d.*
@@ -200,10 +203,8 @@ public class PermissionRepository {
                   OR EXISTS (
                       SELECT 1
                       FROM dataset_group_permissions dgp
-                      JOIN user_group_members ugm
-                        ON ugm.group_id = dgp.group_id
                       WHERE dgp.dataset_id = d.id
-                        AND ugm.user_id = :userId
+                        AND dgp.group_id IN (:groupIds)
                         AND dgp.access_level IN ('READ', 'WRITE')
                   )
               )
@@ -211,6 +212,7 @@ public class PermissionRepository {
             """, Dataset.class)
         .setParameter("userId", userId)
         .setParameter("datasetId", datasetId)
+        .setParameter("groupIds", hasGroups ? groupIds : List.of(emptyUUID))
         .getResultList();
 
     return result.stream().findFirst();
@@ -235,7 +237,43 @@ public class PermissionRepository {
   }
 
   @Transactional
-  public void grantGroupAccess(UUID datasetId, String groupId, AccessLevel accessLevel) {
+  public void deleteUserAccess(UUID datasetId, UUID userId) {
+    entityManager.createNativeQuery("""
+        DELETE FROM dataset_user_permissions
+        WHERE dataset_id = :datasetId
+          AND user_id = :userId
+        """)
+        .setParameter("datasetId", datasetId)
+        .setParameter("userId", userId)
+        .executeUpdate();
+  }
+
+  public Map<UUID, AccessLevel> findUserWithAccess(
+      UUID datasetId) {
+    @SuppressWarnings("unchecked")
+    List<Object[]> rows = entityManager
+        .createNativeQuery("""
+            SELECT user_id, access_level
+            FROM dataset_user_permissions
+            WHERE dataset_id = :datasetId
+            """)
+        .setParameter("datasetId", datasetId)
+        .getResultList();
+
+    Map<UUID, AccessLevel> result = new HashMap<>();
+
+    for (Object[] row : rows) {
+      UUID userId = (UUID) row[0];
+      AccessLevel accessLevel = AccessLevel.valueOf((String) row[1]);
+
+      result.put(userId, accessLevel);
+    }
+
+    return result;
+  }
+
+  @Transactional
+  public void grantGroupAccess(UUID datasetId, UUID groupId, AccessLevel accessLevel) {
     entityManager.createNativeQuery("""
         INSERT INTO dataset_group_permissions (dataset_id, group_id, access_level)
         VALUES (:datasetId, :groupId, :accessLevel)
@@ -248,7 +286,44 @@ public class PermissionRepository {
         .executeUpdate();
   }
 
-  public boolean hasAccessLevel(UUID userId, UUID datasetId, AccessLevel requiredLevel) {
+  @Transactional
+  public void deleteGroupAccess(UUID datasetId, UUID groupId) {
+    entityManager.createNativeQuery("""
+        DELETE FROM dataset_group_permissions
+        WHERE dataset_id = :datasetId
+          AND group_id = :groupId
+        """)
+        .setParameter("datasetId", datasetId)
+        .setParameter("groupId", groupId)
+        .executeUpdate();
+  }
+
+  public Map<UUID, AccessLevel> findGroupsWithAccess(
+      UUID datasetId) {
+    @SuppressWarnings("unchecked")
+    List<Object[]> rows = entityManager
+        .createNativeQuery("""
+            SELECT group_id, access_level
+            FROM dataset_group_permissions
+            WHERE dataset_id = :datasetId
+            """)
+        .setParameter("datasetId", datasetId)
+        .getResultList();
+
+    Map<UUID, AccessLevel> result = new HashMap<>();
+
+    for (Object[] row : rows) {
+      UUID groupId = (UUID) row[0];
+      AccessLevel accessLevel = AccessLevel.valueOf((String) row[1]);
+
+      result.put(groupId, accessLevel);
+    }
+
+    return result;
+  }
+
+  public boolean hasAccessLevel(UUID userId, List<UUID> groupIds, UUID datasetId, AccessLevel requiredLevel) {
+    boolean hasGroups = groupIds != null && !groupIds.isEmpty();
     boolean includePublic = requiredLevel == AccessLevel.READ;
 
     String[] allowedLevels = switch (requiredLevel) {
@@ -276,17 +351,16 @@ public class PermissionRepository {
                       OR EXISTS (
                           SELECT 1
                           FROM dataset_group_permissions dgp
-                          JOIN user_group_members ugm
-                            ON ugm.group_id = dgp.group_id
                           WHERE dgp.dataset_id = d.id
-                            AND ugm.user_id = :userId
-                            AND dgp.access_level IN (:allowedLevels)
+                            AND dgp.group_id IN (:groupIds)
+                            AND dgp.access_level IN ('READ', 'WRITE')
                       )
                   )
             ) THEN 1 ELSE 0 END
             """)
         .setParameter("userId", userId)
         .setParameter("datasetId", datasetId)
+        .setParameter("groupIds", hasGroups ? groupIds : List.of(emptyUUID))
         .setParameter("includePublic", includePublic)
         .setParameter("allowedLevels", List.of(allowedLevels))
         .getSingleResult();

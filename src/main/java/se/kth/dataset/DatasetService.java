@@ -14,7 +14,9 @@ import se.kth.garage.GarageRepository;
 import se.kth.garage.dto.CreateBucketResponse;
 import se.kth.garage.dto.CreateKeyResponse;
 import se.kth.security.PermissionRepository;
+import se.kth.security.keycloak.Group;
 import se.kth.security.keycloak.JwtUser;
+import se.kth.security.keycloak.KeycloakRepository;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -38,6 +40,9 @@ public class DatasetService {
     @Inject
     GarageRepository garageRepository;
 
+    @Inject
+    KeycloakRepository keycloakRepository;
+
     @ConfigProperty(name = "app.ducklake.local.enabled", defaultValue = "false")
     boolean localModeEnabled;
 
@@ -46,8 +51,12 @@ public class DatasetService {
     }
 
     public Pagination<Dataset> listUserDatasets(JwtUser user, int pageIndex, int pageSize) {
-        // Update with query params
-        return permissionRepository.findAccessibleDatasets(user.id(), pageIndex, pageSize);
+        List<UUID> groupIds = keycloakRepository.getAllGroupsForUser(user.id().toString())
+                .stream()
+                .map(Group::getId)
+                .toList();
+
+        return permissionRepository.findAccessibleDatasets(user.id(), groupIds, pageIndex, pageSize);
     }
 
     public DatasetWithSummary getDataset(String id) {
@@ -90,7 +99,12 @@ public class DatasetService {
     }
 
     public DatasetWithSummary getDatasetForUser(String id, JwtUser user) {
-        Dataset d = permissionRepository.findAccessibleDataset(user.id(), UUID.fromString(id)).orElse(null);
+        List<UUID> groupIds = keycloakRepository.getAllGroupsForUser(user.id().toString())
+                .stream()
+                .map(Group::getId)
+                .toList();
+
+        Dataset d = permissionRepository.findAccessibleDataset(user.id(), groupIds, UUID.fromString(id)).orElse(null);
         if (d == null) {
             throw new BadRequestException("Could not find dataset!");
         }
@@ -132,7 +146,12 @@ public class DatasetService {
     }
 
     public Pagination<Dataset> searchDatasetsForUser(String search, JwtUser user, int pageIndex, int pageSize) {
-        return permissionRepository.findAccessibleDatasetsBySearch(user.id(), search, pageIndex, pageSize);
+        List<UUID> groupIds = keycloakRepository.getAllGroupsForUser(user.id().toString())
+                .stream()
+                .map(Group::getId)
+                .toList();
+
+        return permissionRepository.findAccessibleDatasetsBySearch(user.id(), groupIds, search, pageIndex, pageSize);
     }
 
     private CreateKeyResponse createTempKey(String bucketName) {

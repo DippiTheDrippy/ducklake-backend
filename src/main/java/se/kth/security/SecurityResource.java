@@ -9,6 +9,8 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.UUID;
+
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 
@@ -93,6 +95,38 @@ public class SecurityResource {
         try {
             securityService.updateUserPermissions(id, datasetId, req.accessLevel());
             return Response.ok().build();
+        } catch (NotFoundException e) {
+            log.error(e.getMessage());
+            return Response.serverError().entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
+
+    @DELETE
+    @Path("{id}/dataset/{dataset_id}")
+    @RolesAllowed(ADMIN_ROLE)
+    public Response deleteUserPermissions(@PathParam("id") String userId,
+            @PathParam("dataset_id") String datasetId) {
+        try {
+            securityService.deleteUserPermissions(userId, datasetId);
+            return Response.ok().build();
+        } catch (NotFoundException e) {
+            log.error(e.getMessage());
+            return Response.serverError().entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
+
+    @GET
+    @Path("users/dataset/{id}")
+    @RolesAllowed(ADMIN_ROLE)
+    public Response listUsersWithAccess(@PathParam("id") String datasetId) {
+        try {
+            return Response.ok(securityService.getUsersWithAccess(UUID.fromString(datasetId))).build();
         } catch (NotFoundException e) {
             log.error(e.getMessage());
             return Response.serverError().entity(e.getMessage()).build();
@@ -195,6 +229,38 @@ public class SecurityResource {
         try {
             securityService.updateGroupPermissions(id, datasetId, req.accessLevel());
             return Response.ok().build();
+        } catch (NotFoundException e) {
+            log.error(e.getMessage());
+            return Response.serverError().entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
+
+    @DELETE
+    @Path("groups/{id}/dataset/{dataset_id}")
+    @RolesAllowed(ADMIN_ROLE)
+    public Response deleteGroupPermissions(@PathParam("id") String groupId,
+            @PathParam("dataset_id") String datasetId) {
+        try {
+            securityService.deleteGroupPermissions(groupId, datasetId);
+            return Response.ok().build();
+        } catch (NotFoundException e) {
+            log.error(e.getMessage());
+            return Response.serverError().entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
+
+    @GET
+    @Path("groups/dataset/{id}")
+    @RolesAllowed(ADMIN_ROLE)
+    public Response listGroupsWithAccess(@PathParam("id") String datasetId) {
+        try {
+            return Response.ok(securityService.getGroupsWithAccess(UUID.fromString(datasetId))).build();
         } catch (NotFoundException e) {
             log.error(e.getMessage());
             return Response.serverError().entity(e.getMessage()).build();
