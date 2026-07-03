@@ -33,12 +33,28 @@ public class SecurityResource {
     SecurityService securityService;
 
     @GET
-    @RolesAllowed(ADMIN_ROLE)
     public Response listUsers(
             @QueryParam("pageIndex") int pageIndex,
             @QueryParam("pageSize") int pageSize) {
         try {
             return Response.ok(securityService.listUsers(pageIndex, pageSize)).build();
+        } catch (NotFoundException e) {
+            log.error(e.getMessage());
+            return Response.serverError().entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
+
+    @GET
+    @Path("search")
+    public Response searchUsers(
+            @QueryParam("search") String search,
+            @QueryParam("pageIndex") int pageIndex,
+            @QueryParam("pageSize") int pageSize) {
+        try {
+            return Response.ok(securityService.searchUsers(search, pageIndex, pageSize)).build();
         } catch (NotFoundException e) {
             log.error(e.getMessage());
             return Response.serverError().entity(e.getMessage()).build();
@@ -92,17 +108,47 @@ public class SecurityResource {
 
     @GET
     @Path("groups")
+    @RolesAllowed(ADMIN_ROLE)
     public Response listGroups(
+            @QueryParam("pageIndex") int pageIndex,
+            @QueryParam("pageSize") int pageSize) {
+        try {
+            return Response.ok(securityService.listGroups(pageIndex, pageSize)).build();
+        } catch (NotFoundException e) {
+            log.error(e.getMessage());
+            return Response.serverError().entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
+
+    @GET
+    @Path("groups/me")
+    public Response listMyGroups(
             @QueryParam("pageIndex") int pageIndex,
             @QueryParam("pageSize") int pageSize) {
         JwtUser user = JwtUser.fromToken(jwt);
 
         try {
-            if (user.isInGroup(ADMIN_ROLE)) {
-                return Response.ok(securityService.listGroups(pageIndex, pageSize)).build();
-            } else {
-                return Response.ok(securityService.listMyGroups(user, pageIndex, pageSize)).build();
-            }
+            return Response.ok(securityService.listMyGroups(user, pageIndex, pageSize)).build();
+        } catch (NotFoundException e) {
+            log.error(e.getMessage());
+            return Response.serverError().entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
+
+    @GET
+    @Path("groups/search")
+    public Response searchGroups(
+            @QueryParam("search") String search,
+            @QueryParam("pageIndex") int pageIndex,
+            @QueryParam("pageSize") int pageSize) {
+        try {
+            return Response.ok(securityService.searchGroups(search, pageIndex, pageSize)).build();
         } catch (NotFoundException e) {
             log.error(e.getMessage());
             return Response.serverError().entity(e.getMessage()).build();
@@ -117,6 +163,20 @@ public class SecurityResource {
     public Response getGroup(@PathParam("id") String id) {
         try {
             return Response.ok(securityService.getGroup(id)).build();
+        } catch (NotFoundException e) {
+            log.error(e.getMessage());
+            return Response.serverError().entity(e.getMessage()).build();
+        } catch (Exception e) {
+            log.error(e.getMessage());
+            return Response.serverError().build();
+        }
+    }
+
+    @GET
+    @Path("groups/{id}/members")
+    public Response getGroupMembers(@PathParam("id") String id) {
+        try {
+            return Response.ok(securityService.getGroupMembers(id)).build();
         } catch (NotFoundException e) {
             log.error(e.getMessage());
             return Response.serverError().entity(e.getMessage()).build();

@@ -120,30 +120,17 @@ public class KeycloakRepository {
         return new Pagination<>(groups, pageIndex, pageSize, totalItems);
     }
 
-    public Pagination<User> getGroupMembers(
-            String groupId,
-            int pageIndex,
-            int pageSize) {
-        validatePagination(pageIndex, pageSize);
+    public List<User> getGroupMembers(
+            String groupId) {
+        int offset = 0;
+        int pageSize = 1000;
 
-        int first = toFirstResult(pageIndex, pageSize);
-
-        List<User> users = keycloakAdminClient.getGroupMembers(
+        return keycloakAdminClient.getGroupMembers(
                 realm,
                 groupId,
-                first,
+                offset,
                 pageSize,
                 BRIEF_REPRESENTATION);
-
-        /*
-         * Keycloak's group members endpoint supports first/max pagination,
-         * but there is no dedicated /groups/{groupId}/members/count endpoint.
-         *
-         * Therefore, we cannot get a reliable totalItems without extra work.
-         * Returning the visible page size as totalItems keeps this method usable,
-         * but totalPages will only represent the current fetched result.
-         */
-        return new Pagination<>(users, pageIndex, pageSize, users.size());
     }
 
     private int toFirstResult(int pageIndex, int pageSize) {

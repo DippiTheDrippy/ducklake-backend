@@ -18,7 +18,7 @@ CREATE TABLE dataset_user_permissions (
 
 CREATE TABLE dataset_group_permissions (
     dataset_id UUID NOT NULL,
-    group_id TEXT NOT NULL, -- Keylcoak group name
+    group_id UUID NOT NULL, -- Keylcoak group name
 
     access_level TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

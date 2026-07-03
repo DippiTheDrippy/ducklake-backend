@@ -30,6 +30,10 @@ public class SecurityService {
         return keycloakRepository.getUsers(pageIndex, pageSize);
     }
 
+    public Pagination<User> searchUsers(String search, int pageIndex, int pageSize) {
+        return keycloakRepository.searchUsers(search, pageIndex, pageSize);
+    }
+
     public User getUser(String id) {
         return keycloakRepository.getUserById(id)
                 .orElseThrow(() -> new NotFoundException("User does not exist!"));
@@ -55,9 +59,17 @@ public class SecurityService {
         return keycloakRepository.getGroupsForUser(kUser.id().toString(), pageIndex, pageSize);
     }
 
+    public Pagination<Group> searchGroups(String search, int pageIndex, int pageSize) {
+        return keycloakRepository.searchGroups(search, pageIndex, pageSize);
+    }
+
     public Group getGroup(String id) {
         return keycloakRepository.getGroupById(id)
                 .orElseThrow(() -> new NotFoundException("Group does not exist!"));
+    }
+
+    public List<User> getGroupMembers(String id) {
+        return keycloakRepository.getGroupMembers(id);
     }
 
     public void updateGroupPermissions(String groupId, String datasetId, AccessLevel accessLevel) {
