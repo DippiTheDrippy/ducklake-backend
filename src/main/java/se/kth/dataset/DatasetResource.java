@@ -14,7 +14,7 @@ import io.quarkus.security.UnauthorizedException;
 import se.kth.credential.CredentialService;
 import se.kth.dataset.dto.CreateCredentialRequest;
 import se.kth.favorite.FavoriteService;
-import se.kth.security.KeycloakUser;
+import se.kth.security.keycloak.JwtUser;
 
 @Slf4j
 @Path("api/datasets")
@@ -39,7 +39,7 @@ public class DatasetResource {
 
     @GET
     public Response listDatasets(@QueryParam("pageIndex") int pageIndex, @QueryParam("pageSize") int pageSize) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
+        JwtUser user = JwtUser.fromToken(jwt);
 
         try {
             if (user.isInGroup(ADMIN_ROLE)) {
@@ -56,7 +56,7 @@ public class DatasetResource {
     @GET
     @Path("{id}")
     public Response getDataset(@PathParam("id") String id) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
+        JwtUser user = JwtUser.fromToken(jwt);
 
         try {
             if (user.isInGroup(ADMIN_ROLE)) {
@@ -76,7 +76,7 @@ public class DatasetResource {
             @QueryParam("search") String search,
             @QueryParam("pageIndex") int pageIndex,
             @QueryParam("pageSize") int pageSize) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
+        JwtUser user = JwtUser.fromToken(jwt);
 
         try {
             if (user.isInGroup(ADMIN_ROLE)) {
@@ -99,10 +99,10 @@ public class DatasetResource {
     public Response listFavorites(
             @QueryParam("pageIndex") int pageIndex,
             @QueryParam("pageSize") int pageSize) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
+        JwtUser user = JwtUser.fromToken(jwt);
 
         try {
-            return Response.ok(favoriteService.listFavoritedDatasets(user.email(), pageIndex, pageSize)).build();
+            return Response.ok(favoriteService.listFavoritedDatasets(user, pageIndex, pageSize)).build();
         } catch (BadRequestException e) {
             return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
         } catch (Exception e) {
@@ -115,10 +115,10 @@ public class DatasetResource {
     @POST
     @Path("favorite/{id}")
     public Response favoriteDataset(@PathParam("id") String id) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
+        JwtUser user = JwtUser.fromToken(jwt);
 
         try {
-            favoriteService.addFavorite(id, user.email());
+            favoriteService.addFavorite(user, id);
             return Response.ok().build();
         } catch (BadRequestException e) {
             return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
@@ -132,10 +132,10 @@ public class DatasetResource {
     @DELETE
     @Path("favorite/{id}")
     public Response unfavoriteDataset(@PathParam("id") String id) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
+        JwtUser user = JwtUser.fromToken(jwt);
 
         try {
-            favoriteService.removeFavorite(id, user.email());
+            favoriteService.removeFavorite(user, id);
             return Response.ok().build();
         } catch (BadRequestException e) {
             return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
@@ -155,10 +155,10 @@ public class DatasetResource {
     public Response listMyCredentials(
             @QueryParam("pageIndex") int pageIndex,
             @QueryParam("pageSize") int pageSize) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
+        JwtUser user = JwtUser.fromToken(jwt);
 
         try {
-            return Response.ok(credentialService.listUserCredentials(user.email(), pageIndex, pageSize)).build();
+            return Response.ok(credentialService.listUserCredentials(user, pageIndex, pageSize)).build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -168,10 +168,10 @@ public class DatasetResource {
     @GET
     @Path("{id}/credentials")
     public Response getDatasetCredential(@PathParam("id") String id) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
+        JwtUser user = JwtUser.fromToken(jwt);
 
         try {
-            return Response.ok(credentialService.getDatasetCredential(id, user.email())).build();
+            return Response.ok(credentialService.getDatasetCredential(user, id)).build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -183,10 +183,10 @@ public class DatasetResource {
     public Response createDatasetCredentials(
             @PathParam("id") String id,
             CreateCredentialRequest req) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
+        JwtUser user = JwtUser.fromToken(jwt);
 
         try {
-            credentialService.createCredential(id, user.email(), req);
+            credentialService.createCredential(user, id, req);
             return Response.ok().build();
         } catch (UnauthorizedException e) {
             return Response.status(Status.UNAUTHORIZED).entity(e.getMessage()).build();
@@ -199,11 +199,11 @@ public class DatasetResource {
     @POST
     @Path("credentials/{id}/rotate")
     public Response rotateDatasetCredentials(@PathParam("id") String id) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
+        JwtUser user = JwtUser.fromToken(jwt);
 
         try {
 
-            return Response.ok(credentialService.rotateCredential(id, user.email())).build();
+            return Response.ok(credentialService.rotateCredential(user, id)).build();
         } catch (BadRequestException e) {
             return Response.status(Status.BAD_REQUEST).entity(e.getMessage()).build();
         } catch (UnauthorizedException e) {
@@ -217,10 +217,10 @@ public class DatasetResource {
     @DELETE
     @Path("credentials/{id}")
     public Response deleteCredentials(@PathParam("id") String id) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
+        JwtUser user = JwtUser.fromToken(jwt);
 
         try {
-            credentialService.deleteCredential(id, user.email());
+            credentialService.deleteCredential(user, id);
             return Response.ok().build();
         } catch (UnauthorizedException e) {
             return Response.status(Status.UNAUTHORIZED).entity(e.getMessage()).build();

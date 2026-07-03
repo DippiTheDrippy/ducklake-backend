@@ -22,14 +22,10 @@ import se.kth.postgres.PostgresUserRepository;
 import se.kth.postgres.PostgresUserRepository.DbCredentials;
 import se.kth.security.AccessLevel;
 import se.kth.security.PermissionRepository;
-import se.kth.security.user.User;
-import se.kth.security.user.UserRepository;
+import se.kth.security.keycloak.JwtUser;
 
 @ApplicationScoped
 public class CredentialService {
-
-        @Inject
-        UserRepository userRepository;
 
         @Inject
         CredentialRepository credentialRepository;
@@ -46,18 +42,12 @@ public class CredentialService {
         @Inject
         PermissionRepository permissionRepository;
 
-        public Credential getDatasetCredential(String datasetId, String email) {
-                User user = userRepository.findByEmail(email)
-                                .orElseThrow(() -> new NoSuchElementException("No such user!"));
-
-                return credentialRepository.findByDatasetAndUser(UUID.fromString(datasetId), user.getId()).orElse(null);
+        public Credential getDatasetCredential(JwtUser user, String datasetId) {
+                return credentialRepository.findByDatasetAndUser(UUID.fromString(datasetId), user.id()).orElse(null);
         }
 
-        public Pagination<Credential> listUserCredentials(String email, int pageIndex, int pageSize) {
-                User user = userRepository.findByEmail(email)
-                                .orElseThrow(() -> new NoSuchElementException("No such user!"));
-
-                return credentialRepository.listByUser(user.getId(), pageIndex, pageSize);
+        public Pagination<Credential> listUserCredentials(JwtUser user, int pageIndex, int pageSize) {
+                return credentialRepository.listByUser(user.id(), pageIndex, pageSize);
         }
 
         /*
@@ -66,15 +56,13 @@ public class CredentialService {
          * - Create garage access key
          * - Create postgres user with access to the ducklake catalog database
          */
-        public CreateCredentialResponse createCredential(String datasetId, String email, CreateCredentialRequest req) {
+        public CreateCredentialResponse createCredential(JwtUser user, String datasetId, CreateCredentialRequest req) {
                 // Locate user and dataset
-                User user = userRepository.findByEmail(email)
-                                .orElseThrow(() -> new BadRequestException("Could not locate user!"));
                 Dataset d = datasetRepository.findByIdOptional(UUID.fromString(datasetId))
                                 .orElseThrow(() -> new NoSuchElementException("Connected dataset could not be found!"));
 
                 // Does user have request access level to the dataset?
-                if (permissionRepository.hasAccessLevel(user.getId(), d.getId(), req.access())) {
+                if (permissionRepository.hasAccessLevel(user.id(), d.getId(), req.access())) {
                         // Create garage access key, access level is assigned below
                         String keyName = "ducklake_cbh_" + UUID.randomUUID().toString();
                         CreateBucketResponse bucket = garageRepository.getBucketByGlobalAlias(d.getBucketName());
@@ -100,7 +88,7 @@ public class CredentialService {
 
                         Credential cred = new Credential(
                                         d.getId(),
-                                        user.getId(),
+                                        user.id(),
                                         req.name(),
                                         dbCred.username(),
                                         key.accessKeyId(),
@@ -112,7 +100,7 @@ public class CredentialService {
                                         req.access(),
                                         req.name(),
                                         d.getId(),
-                                        user.getId(),
+                                        user.id(),
                                         d.getName(),
                                         d.getBucketName(),
                                         dbCred.username(),
@@ -130,10 +118,8 @@ public class CredentialService {
          * - Generates a new password for the postgres user.
          * - Recreates the Garage Access Key.
          */
-        public CreateCredentialResponse rotateCredential(String id, String email) {
+        public CreateCredentialResponse rotateCredential(JwtUser user, String id) {
                 // Locate user, locate credential
-                User user = userRepository.findByEmail(email)
-                                .orElseThrow(() -> new BadRequestException("Could not locate user!"));
                 Credential cred = credentialRepository.findByIdOptional(UUID.fromString(id))
                                 .orElseThrow(() -> new NoSuchElementException("No such credential!"));
 
@@ -141,7 +127,7 @@ public class CredentialService {
                         throw new BadRequestException("Credential has already expired.");
 
                 // Make sure user owns the credential
-                if (user.getId().compareTo(cred.getUserId()) != 0) {
+                if (user.id().compareTo(cred.getUserId()) != 0) {
                         throw new UnauthorizedException("User does not own this credential");
                 }
 
@@ -171,7 +157,7 @@ public class CredentialService {
                                 AccessLevel.valueOf(cred.getAccessLevel()),
                                 cred.getName(),
                                 d.getId(),
-                                user.getId(),
+                                user.id(),
                                 d.getName(),
                                 d.getBucketName(),
                                 cred.getPostgresUsername(),
@@ -186,16 +172,12 @@ public class CredentialService {
          * - Checks whether the user owns the credential they are aiming to delete
          * - Delete postgres user, garage key, and credential entity in backend db
          */
-        public void deleteCredential(String id, String email) {
-                // Locate user, locate credential
-                User user = userRepository.findByEmail(email)
-                                .orElseThrow(() -> new BadRequestException("Could not locate user!"));
-
+        public void deleteCredential(JwtUser user, String id) {
                 Credential cred = credentialRepository.findByIdOptional(UUID.fromString(id))
                                 .orElseThrow(() -> new NoSuchElementException("No such credential!"));
 
                 // Make sure user owns the credential
-                if (user.getId().compareTo(cred.getUserId()) != 0) {
+                if (user.id().compareTo(cred.getUserId()) != 0) {
                         throw new UnauthorizedException("User does not own this credential");
                 }
 

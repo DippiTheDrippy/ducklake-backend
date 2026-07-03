@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import se.kth.dataset.Dataset;
-import se.kth.security.user.User;
+import se.kth.security.keycloak.User;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -25,10 +25,6 @@ public class Favorite {
     @Id
     @Column(name = "dataset_id")
     private UUID datasetId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", insertable = false, updatable = false)
-    private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dataset_id", insertable = false, updatable = false)

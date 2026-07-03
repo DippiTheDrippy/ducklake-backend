@@ -15,6 +15,7 @@ import org.eclipse.microprofile.jwt.JsonWebToken;
 import io.quarkus.security.Authenticated;
 import se.kth.security.dto.CreateGroupRequest;
 import se.kth.security.dto.UpdatePermissionsRequest;
+import se.kth.security.keycloak.JwtUser;
 
 @Slf4j
 @Path("api/security")
@@ -38,6 +39,9 @@ public class SecurityResource {
             @QueryParam("pageSize") int pageSize) {
         try {
             return Response.ok(securityService.listUsers(pageIndex, pageSize)).build();
+        } catch (NotFoundException e) {
+            log.error(e.getMessage());
+            return Response.serverError().entity(e.getMessage()).build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -47,7 +51,7 @@ public class SecurityResource {
     @GET
     @Path("{id}")
     public Response getUser(@PathParam("id") String id) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
+        JwtUser user = JwtUser.fromToken(jwt);
 
         try {
             if (user.isInGroup(ADMIN_ROLE)) {
@@ -55,19 +59,9 @@ public class SecurityResource {
             } else {
                 return Response.ok(securityService.getMyself(user)).build();
             }
-        } catch (Exception e) {
+        } catch (NotFoundException e) {
             log.error(e.getMessage());
-            return Response.serverError().build();
-        }
-    }
-
-    @POST
-    @Path("register")
-    public Response register() {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
-
-        try {
-            return Response.ok(securityService.register(user)).build();
+            return Response.serverError().entity(e.getMessage()).build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -83,19 +77,9 @@ public class SecurityResource {
         try {
             securityService.updateUserPermissions(id, datasetId, req.accessLevel());
             return Response.ok().build();
-        } catch (Exception e) {
+        } catch (NotFoundException e) {
             log.error(e.getMessage());
-            return Response.serverError().build();
-        }
-    }
-
-    @DELETE
-    @Path("{id}")
-    @RolesAllowed(ADMIN_ROLE)
-    public Response deleteUser(@PathParam("id") String id) {
-        try {
-            securityService.deleteUser(id);
-            return Response.ok().build();
+            return Response.serverError().entity(e.getMessage()).build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -111,7 +95,7 @@ public class SecurityResource {
     public Response listGroups(
             @QueryParam("pageIndex") int pageIndex,
             @QueryParam("pageSize") int pageSize) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
+        JwtUser user = JwtUser.fromToken(jwt);
 
         try {
             if (user.isInGroup(ADMIN_ROLE)) {
@@ -119,6 +103,9 @@ public class SecurityResource {
             } else {
                 return Response.ok(securityService.listMyGroups(user, pageIndex, pageSize)).build();
             }
+        } catch (NotFoundException e) {
+            log.error(e.getMessage());
+            return Response.serverError().entity(e.getMessage()).build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -128,26 +115,11 @@ public class SecurityResource {
     @GET
     @Path("groups/{id}")
     public Response getGroup(@PathParam("id") String id) {
-        KeycloakUser user = KeycloakUser.fromToken(jwt);
-
         try {
-            if (user.isInGroup(ADMIN_ROLE)) {
-                return Response.ok(securityService.getGroup(id)).build();
-            } else {
-                return Response.ok(securityService.getGroupIfMember(id, user)).build();
-            }
-        } catch (Exception e) {
+            return Response.ok(securityService.getGroup(id)).build();
+        } catch (NotFoundException e) {
             log.error(e.getMessage());
-            return Response.serverError().build();
-        }
-    }
-
-    @POST
-    @Path("groups")
-    @RolesAllowed(ADMIN_ROLE)
-    public Response createGroup(@Valid CreateGroupRequest req) {
-        try {
-            return Response.ok(securityService.createGroup(req)).build();
+            return Response.serverError().entity(e.getMessage()).build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
@@ -163,23 +135,12 @@ public class SecurityResource {
         try {
             securityService.updateGroupPermissions(id, datasetId, req.accessLevel());
             return Response.ok().build();
+        } catch (NotFoundException e) {
+            log.error(e.getMessage());
+            return Response.serverError().entity(e.getMessage()).build();
         } catch (Exception e) {
             log.error(e.getMessage());
             return Response.serverError().build();
         }
     }
-
-    @DELETE
-    @Path("groups/{id}")
-    @RolesAllowed(ADMIN_ROLE)
-    public Response deleteGroups(@PathParam("id") String id) {
-        try {
-            securityService.deleteGroup(id);
-            return Response.ok().build();
-        } catch (Exception e) {
-            log.error(e.getMessage());
-            return Response.serverError().build();
-        }
-    }
-
 }

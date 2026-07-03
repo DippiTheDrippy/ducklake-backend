@@ -6,11 +6,6 @@ CREATE TABLE favorites (
 
     PRIMARY KEY (user_id, dataset_id),
 
-    CONSTRAINT fk_favorites_user
-       FOREIGN KEY (user_id)
-           REFERENCES users(id)
-           ON DELETE CASCADE,
-
     CONSTRAINT fk_favorites_dataset
        FOREIGN KEY (dataset_id)
            REFERENCES datasets(id)
@@ -19,6 +14,8 @@ CREATE TABLE favorites (
 
 CREATE TABLE credentials (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    name TEXT NOT NULL,
 
     dataset_id UUID NOT NULL,
     user_id UUID NOT NULL,
@@ -36,11 +33,6 @@ CREATE TABLE credentials (
     CONSTRAINT fk_credentials_dataset
         FOREIGN KEY (dataset_id)
             REFERENCES datasets(id)
-            ON DELETE CASCADE,
-
-    CONSTRAINT fk_credentials_user
-        FOREIGN KEY (user_id)
-            REFERENCES users(id)
             ON DELETE CASCADE,
 
     CONSTRAINT chk_credentials_expiry

@@ -1,43 +1,29 @@
 package se.kth.favorite;
 
-import java.util.List;
 import java.util.UUID;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.BadRequestException;
 import se.kth.common.Pagination;
 import se.kth.dataset.Dataset;
-import se.kth.security.user.User;
-import se.kth.security.user.UserRepository;
+import se.kth.security.keycloak.JwtUser;
 
 @ApplicationScoped
 public class FavoriteService {
 
     @Inject
-    UserRepository userRepository;
-
-    @Inject
     FavoriteRepository favoriteRepository;
 
-    public Pagination<Dataset> listFavoritedDatasets(String email, int pageIndex, int pageSize) {
-        User user = getUser(email);
-        return favoriteRepository.listFavortiedDatasets(user.getId(), pageIndex, pageSize);
+    public Pagination<Dataset> listFavoritedDatasets(JwtUser user, int pageIndex, int pageSize) {
+        return favoriteRepository.listFavortiedDatasets(user.id(), pageIndex, pageSize);
     }
 
-    public void addFavorite(String id, String email) {
-        User user = getUser(email);
-        favoriteRepository.addFavorite(user.getId(), UUID.fromString(id));
+    public void addFavorite(JwtUser user, String id) {
+        favoriteRepository.addFavorite(user.id(), UUID.fromString(id));
     }
 
-    public void removeFavorite(String id, String email) {
-        User user = getUser(email);
-        favoriteRepository.removeFavorite(user.getId(), UUID.fromString(id));
-    }
-
-    private User getUser(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new BadRequestException("User does not exist!"));
+    public void removeFavorite(JwtUser user, String id) {
+        favoriteRepository.removeFavorite(user.id(), UUID.fromString(id));
     }
 
 }

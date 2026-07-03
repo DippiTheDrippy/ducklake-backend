@@ -13,10 +13,8 @@ import se.kth.ducklake.model.TableSummary;
 import se.kth.garage.GarageRepository;
 import se.kth.garage.dto.CreateBucketResponse;
 import se.kth.garage.dto.CreateKeyResponse;
-import se.kth.security.KeycloakUser;
 import se.kth.security.PermissionRepository;
-import se.kth.security.user.User;
-import se.kth.security.user.UserRepository;
+import se.kth.security.keycloak.JwtUser;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -35,9 +33,6 @@ public class DatasetService {
     PermissionRepository permissionRepository;
 
     @Inject
-    UserRepository userRepository;
-
-    @Inject
     DucklakeRepository ducklakeRepository;
 
     @Inject
@@ -50,12 +45,9 @@ public class DatasetService {
         return datasetRepository.listAll(pageIndex, pageSize);
     }
 
-    public Pagination<Dataset> listUserDatasets(KeycloakUser kUser, int pageIndex, int pageSize) {
-        User user = userRepository.findByEmail(kUser.email())
-                .orElseThrow(() -> new IllegalArgumentException("User does not exist: " + kUser.email()));
-
+    public Pagination<Dataset> listUserDatasets(JwtUser user, int pageIndex, int pageSize) {
         // Update with query params
-        return permissionRepository.findAccessibleDatasets(user.getId(), pageIndex, pageSize);
+        return permissionRepository.findAccessibleDatasets(user.id(), pageIndex, pageSize);
     }
 
     public DatasetWithSummary getDataset(String id) {
@@ -97,11 +89,8 @@ public class DatasetService {
         return resp;
     }
 
-    public DatasetWithSummary getDatasetForUser(String id, KeycloakUser kUser) {
-        User user = userRepository.findByEmail(kUser.email())
-                .orElseThrow(() -> new IllegalArgumentException("User does not exist: " + kUser.email()));
-
-        Dataset d = permissionRepository.findAccessibleDataset(user.getId(), UUID.fromString(id)).orElse(null);
+    public DatasetWithSummary getDatasetForUser(String id, JwtUser user) {
+        Dataset d = permissionRepository.findAccessibleDataset(user.id(), UUID.fromString(id)).orElse(null);
         if (d == null) {
             throw new BadRequestException("Could not find dataset!");
         }
@@ -142,11 +131,8 @@ public class DatasetService {
         return datasetRepository.searchByNameOrDesc(search, pageIndex, pageSize);
     }
 
-    public Pagination<Dataset> searchDatasetsForUser(String search, KeycloakUser kUser, int pageIndex, int pageSize) {
-        User user = userRepository.findByEmail(kUser.email())
-                .orElseThrow(() -> new IllegalArgumentException("User does not exist: " + kUser.email()));
-
-        return permissionRepository.findAccessibleDatasetsBySearch(user.getId(), search, pageIndex, pageSize);
+    public Pagination<Dataset> searchDatasetsForUser(String search, JwtUser user, int pageIndex, int pageSize) {
+        return permissionRepository.findAccessibleDatasetsBySearch(user.id(), search, pageIndex, pageSize);
     }
 
     private CreateKeyResponse createTempKey(String bucketName) {

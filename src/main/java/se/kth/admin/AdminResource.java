@@ -19,7 +19,7 @@ import se.kth.admin.dto.CreateDatasetMultipartRequest;
 import se.kth.admin.dto.CreateDatasetRequest;
 import se.kth.admin.dto.UpdateDatasetRequest;
 import se.kth.dataset.Dataset;
-import se.kth.security.KeycloakUser;
+import se.kth.security.keycloak.JwtUser;
 
 @Slf4j
 @Path("api/admin")

@@ -235,7 +235,7 @@ public class PermissionRepository {
   }
 
   @Transactional
-  public void grantGroupAccess(UUID datasetId, UUID groupId, AccessLevel accessLevel) {
+  public void grantGroupAccess(UUID datasetId, String groupId, AccessLevel accessLevel) {
     entityManager.createNativeQuery("""
         INSERT INTO dataset_group_permissions (dataset_id, group_id, access_level)
         VALUES (:datasetId, :groupId, :accessLevel)
