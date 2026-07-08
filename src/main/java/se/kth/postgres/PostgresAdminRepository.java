@@ -125,7 +125,7 @@ public class PostgresAdminRepository {
             throw new IllegalArgumentException("Invalid JDBC URL: " + baseJdbcUrl);
         }
 
-        return baseJdbcUrl.substring(0, index) + database;
+        return baseJdbcUrl.substring(0, index) + '/' + database;
     }
 
 }

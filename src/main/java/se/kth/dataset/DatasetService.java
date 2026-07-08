@@ -3,6 +3,7 @@ package se.kth.dataset;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.NotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import se.kth.common.Pagination;
 import se.kth.common.exceptions.DatasetException;
@@ -62,7 +63,7 @@ public class DatasetService {
     public DatasetWithSummary getDataset(String id) {
         Dataset d = datasetRepository.findById(UUID.fromString(id));
         if (d == null) {
-            throw new BadRequestException("Could not find dataset!");
+            throw new NotFoundException("Dataset does not exist!");
         }
 
         CreateKeyResponse tempKey = null;
@@ -106,7 +107,7 @@ public class DatasetService {
 
         Dataset d = permissionRepository.findAccessibleDataset(user.id(), groupIds, UUID.fromString(id)).orElse(null);
         if (d == null) {
-            throw new BadRequestException("Could not find dataset!");
+            throw new NotFoundException("Dataset does not exist!");
         }
 
         CreateKeyResponse tempKey = null;
@@ -133,7 +134,7 @@ public class DatasetService {
             }
         } catch (Exception e) {
             log.error(e.getMessage());
-            throw new DatasetException("Failed to retrieve dataset summary");
+            throw new DatasetException("Failed to retrieve dataset summary", e);
         } finally {
             if (tempKey != null)
                 garageRepository.deleteKey(tempKey.accessKeyId());

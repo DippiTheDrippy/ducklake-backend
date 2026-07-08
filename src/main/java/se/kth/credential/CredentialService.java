@@ -100,6 +100,7 @@ public class CredentialService {
                                         d.getId(),
                                         user.id(),
                                         req.name(),
+                                        req.access().toString(),
                                         dbCred.username(),
                                         key.accessKeyId(),
                                         req.neverExpires() ? null : req.expiresAt());

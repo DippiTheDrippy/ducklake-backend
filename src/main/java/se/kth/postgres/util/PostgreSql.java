@@ -9,7 +9,6 @@ import java.util.regex.Pattern;
 public class PostgreSql {
 
     private static final Pattern SAFE_IDENTIFIER = Pattern.compile("[a-z_][a-z0-9_]{0,62}");
-    private static final Pattern TEMP_USERNAME = Pattern.compile("dl_(ro|rw)_[a-f0-9]{8}");
 
     private PostgreSql() {
     }
@@ -20,19 +19,8 @@ public class PostgreSql {
         }
     }
 
-    public static void validateTemporaryUsername(String value) {
-        if (value == null || !TEMP_USERNAME.matcher(value).matches()) {
-            throw new IllegalArgumentException("Invalid temporary DuckLake username: " + value);
-        }
-    }
-
     public static String identifier(String value) {
         validateIdentifier(value);
-        return "\"" + value + "\"";
-    }
-
-    public static String temporaryUsername(String value) {
-        validateTemporaryUsername(value);
         return "\"" + value + "\"";
     }
 

@@ -43,11 +43,6 @@ public class SecurityService {
                 .orElseThrow(() -> new NotFoundException("User does not exist!"));
     }
 
-    public User getMyself(JwtUser user) {
-        return keycloakRepository.getUserById(user.id().toString())
-                .orElseThrow(() -> new NotFoundException("User does not exist!"));
-    }
-
     public void updateUserPermissions(String userId, String datasetId, AccessLevel accessLevel) {
         permissionRepository.grantUserAccess(
                 UUID.fromString(datasetId),

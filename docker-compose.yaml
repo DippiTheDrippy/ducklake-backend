@@ -8,8 +8,29 @@ services:
             POSTGRES_PASSWORD: postgres
             POSTGRES_DB: backend_db
         volumes:
-            - db_data:/var/lib/postgresql/data
+            - ducklake_data:/var/lib/postgresql/data
+
+    garage:
+        image: dxflrs/garage:v2.3.0
+        container_name: garage
+        command: /garage server --single-node --default-bucket
+        ports:
+            - "3900:3900" # S3 API
+            - "3901:3901" # RPC
+            - "3902:3902" # S3 website
+            - "3903:3903" # Admin API
+        environment:
+            GARAGE_DEFAULT_ACCESS_KEY: GKLOCALLOCALLOCALLOCALLOCAL01
+            GARAGE_DEFAULT_SECRET_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+            GARAGE_DEFAULT_BUCKET: default-bucket
+        volumes:
+            - ./docker-garage.toml:/etc/garage.toml:ro
+            - garage-meta:/var/lib/garage/meta
+            - garage-data:/var/lib/garage/data
 
 volumes:
     db_data:
     ducklake_data:
+
+    garage-meta:
+    garage-data:

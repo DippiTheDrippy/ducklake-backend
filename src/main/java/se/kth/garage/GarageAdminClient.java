@@ -11,53 +11,47 @@ import se.kth.garage.dto.*;
 @Produces(MediaType.APPLICATION_JSON)
 public interface GarageAdminClient {
 
-    /*
-     * BUCKETS
-     */
+        /*
+         * BUCKETS
+         */
 
-    @POST
-    @Path("/CreateBucket")
-    CreateBucketResponse createBucket(
-            @HeaderParam("Authorization") String authorization,
-            CreateBucketRequest request
-    );
+        @POST
+        @Path("/CreateBucket")
+        CreateBucketResponse createBucket(
+                        @HeaderParam("Authorization") String authorization,
+                        CreateBucketRequest request);
 
-    @GET
-    @Path("/GetBucketInfo")
-    CreateBucketResponse getBucketInfo(
-            @HeaderParam("Authorization") String authorization,
-            @QueryParam("globalAlias") String globalAlias
-    );
+        @GET
+        @Path("/GetBucketInfo")
+        CreateBucketResponse getBucketInfo(
+                        @HeaderParam("Authorization") String authorization,
+                        @QueryParam("globalAlias") String globalAlias);
 
-    @POST
-    @Path("/DeleteBucket")
-    void deleteBucket(
-            @HeaderParam("Authorization") String authorization,
-            @QueryParam("id") String bucketId
-    );
+        @POST
+        @Path("/DeleteBucket")
+        void deleteBucket(
+                        @HeaderParam("Authorization") String authorization,
+                        @QueryParam("id") String bucketId);
 
-    /*
-     * ACCESS KEYS
-     */
+        /*
+         * ACCESS KEYS
+         */
 
-    @POST
-    @Path("/CreateKey")
-    CreateKeyResponse createKey(
-            @HeaderParam("Authorization") String authorization,
-            CreateKeyRequest request
-    );
+        @POST
+        @Path("/CreateKey")
+        CreateKeyResponse createKey(
+                        @HeaderParam("Authorization") String authorization,
+                        CreateKeyRequest request);
 
-    @DELETE
-    @Path("/DeleteKey")
-    void deleteKey(
-            @HeaderParam("Authorization") String authorization,
-            @QueryParam("id") String keyId
-    );
+        @POST
+        @Path("/DeleteKey")
+        void deleteKey(
+                        @HeaderParam("Authorization") String authorization,
+                        @QueryParam("id") String keyId);
 
-    @POST
-    @Path("/AllowBucketKey")
-    void allowBucketKey(
-            @HeaderParam("Authorization") String authorization,
-            AllowKeyRequest request
-    );
+        @POST
+        @Path("/AllowBucketKey")
+        void allowBucketKey(
+                        @HeaderParam("Authorization") String authorization,
+                        AllowKeyRequest request);
 }

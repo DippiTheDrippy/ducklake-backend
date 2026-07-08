@@ -3,6 +3,7 @@ package se.kth.admin;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.ws.rs.NotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import se.kth.admin.dto.CreateDatasetRequest;
 import se.kth.admin.dto.UpdateDatasetRequest;
@@ -72,43 +73,44 @@ public class AdminService {
      * up to the user to make sure that manually created dataset table has the same
      * name as the one specified in the CreateDatasetRequest.
      */
-    public Dataset createEmptyDataset(CreateDatasetRequest req) {
-        if (!datasetRepository.findByName(req.name()).isEmpty()) {
-            throw new DatasetAlreadyExistsException("Dataset with that name already exists", null);
-        }
+    // public Dataset createEmptyDataset(CreateDatasetRequest req) {
+    // if (!datasetRepository.findByName(req.name()).isEmpty()) {
+    // throw new DatasetAlreadyExistsException("Dataset with that name already
+    // exists", null);
+    // }
 
-        String bucketName = "ducklake-cbh-" + UUID.randomUUID().toString();
+    // String bucketName = "ducklake-cbh-" + UUID.randomUUID().toString();
 
-        CreateBucketResponse bucket = null;
+    // CreateBucketResponse bucket = null;
 
-        try {
-            // Create postgres db
-            postgresAdminRepository.createDatabase(req.name());
+    // try {
+    // // Create postgres db
+    // postgresAdminRepository.createDatabase(req.name());
 
-            // Create bucket
-            bucket = garageRepository.createBucket(bucketName);
+    // // Create bucket
+    // bucket = garageRepository.createBucket(bucketName);
 
-            // Persist dataset info
-            Dataset d = new Dataset(
-                    req.name(),
-                    req.displayName(),
-                    req.description(),
-                    bucketName,
-                    req.isPublic());
+    // // Persist dataset info
+    // Dataset d = new Dataset(
+    // req.name(),
+    // req.displayName(),
+    // req.description(),
+    // bucketName,
+    // req.isPublic());
 
-            return datasetRepository.save(d);
+    // return datasetRepository.save(d);
 
-        } catch (Exception e) {
-            // Clean up bucket and database if dataset was unable to be created
-            if (bucket != null)
-                garageRepository.deleteBucketById(bucket.id());
-            postgresAdminRepository.dropDatabaseIfExist(req.name());
+    // } catch (Exception e) {
+    // // Clean up bucket and database if dataset was unable to be created
+    // if (bucket != null)
+    // garageRepository.deleteBucketById(bucket.id());
+    // postgresAdminRepository.dropDatabaseIfExist(req.name());
 
-            e.printStackTrace();
-            log.error(e.getMessage());
-            throw new DatasetCreationException("Failed dataset creation", e);
-        }
-    }
+    // e.printStackTrace();
+    // log.error(e.getMessage());
+    // throw new DatasetCreationException("Failed dataset creation", e);
+    // }
+    // }
 
     /*
      * Has to:
@@ -145,7 +147,7 @@ public class AdminService {
                 garageRepository.allowKey(key.accessKeyId(), bucket.id(), true);
 
                 // Upload file to garage and get s3 path to said file
-                String dataPath = uploadFileToGarage(file, bucketName);
+                String dataPath = uploadFileToGarage(file, bucketName, key.accessKeyId(), key.secretAccessKey());
                 ducklakeRepository.createTable(new ConnectionArgs(
                         req.name(),
                         bucketName,
@@ -175,7 +177,7 @@ public class AdminService {
         } finally {
             // Remove temporary access key regardless if the dataset is created or not
             if (key != null)
-                garageRepository.deleteKey(keyName);
+                garageRepository.deleteKey(key.accessKeyId());
         }
     }
 
@@ -201,7 +203,7 @@ public class AdminService {
                 garageRepository.allowKey(key.accessKeyId(), bucket.id(), true);
 
                 // Upload file to garage and get s3 path to said file
-                String dataPath = uploadFileToGarage(file, d.getBucketName());
+                String dataPath = uploadFileToGarage(file, d.getBucketName(), key.accessKeyId(), key.secretAccessKey());
                 ducklakeRepository.insertFile(new ConnectionArgs(
                         d.getName(),
                         d.getBucketName(),
@@ -217,7 +219,7 @@ public class AdminService {
         } finally {
             // Remove temporary access key regardless if the dataset is created or not
             if (key != null)
-                garageRepository.deleteKey(keyName);
+                garageRepository.deleteKey(key.accessKeyId());
         }
     }
 
@@ -238,7 +240,7 @@ public class AdminService {
         try {
             // If no such dataset exists, no point in going further
             Dataset d = datasetRepository.findByIdOptional(UUID.fromString(id))
-                    .orElseThrow(() -> new NoSuchElementException("Dataset doesn't exist"));
+                    .orElseThrow(() -> new NotFoundException("Dataset does not exist"));
 
             // Retrieve user-created credentials so we can delete their
             // postgres users and garage access keys
@@ -274,19 +276,19 @@ public class AdminService {
      * HELPER METHODS
      */
 
-    private String uploadFileToGarage(FileUpload file, String bucketName) throws IOException {
+    private String uploadFileToGarage(FileUpload file, String bucketName, String accessKeyId, String secretAccessKey)
+            throws IOException {
         // Establish path to file in garage for upload
         Path path = file.uploadedFile();
         String objectKey = "uploads/" + UUID.randomUUID() + "-" + file.fileName();
 
-        try (InputStream stream = Files.newInputStream(path)) {
-            garageRepository.upload(
-                    objectKey,
-                    stream,
-                    Files.size(path),
-                    file.contentType(),
-                    bucketName);
-        }
+        garageRepository.upload(
+                objectKey,
+                path,
+                file.contentType(),
+                bucketName,
+                accessKeyId,
+                secretAccessKey);
 
         // Establish path for ducklake and create table from said file
         return "s3://" + bucketName + "/" + objectKey;

@@ -7,11 +7,11 @@ import lombok.Data;
 @Data
 public class Pagination<T> {
 
-    private List<T> items;
-    private int pageIndex;
-    private int pageSize;
-    private long totalItems;
-    private int totalPages;
+    public List<T> items;
+    public int pageIndex;
+    public int pageSize;
+    public long totalItems;
+    public int totalPages;
 
     public Pagination(List<T> items, int pageIndex, int pageSize, long totalItems) {
         if (pageSize <= 0) {

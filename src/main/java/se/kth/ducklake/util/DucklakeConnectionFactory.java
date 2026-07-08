@@ -34,7 +34,7 @@ public class DucklakeConnectionFactory {
     @ConfigProperty(name = "app.ducklake.garage.region", defaultValue = "garage")
     String defaultGarageRegion;
 
-    @ConfigProperty(name = "app.ducklake.garage.endpoint", defaultValue = "ducklake-garage:3900")
+    @ConfigProperty(name = "app.ducklake.garage.endpoint", defaultValue = "localhost:3900")
     String defaultGarageEndpoint;
 
     @ConfigProperty(name = "app.ducklake.garage.url-style", defaultValue = "path")

@@ -82,7 +82,7 @@ public class PostgresUserRepository {
                     REVOKE %s FROM %s
                     """.formatted(
                     PostgreSql.identifier(readerRole),
-                    PostgreSql.temporaryUsername(username)));
+                    PostgreSql.identifier(username)));
         } catch (Exception e) {
             log.warn("Failed to revoke reader role from " + username);
         }
@@ -92,14 +92,14 @@ public class PostgresUserRepository {
                     REVOKE %s FROM %s
                     """.formatted(
                     PostgreSql.identifier(writerRole),
-                    PostgreSql.temporaryUsername(username)));
+                    PostgreSql.identifier(username)));
         } catch (Exception e) {
             log.warn("Failed to revoke writer role from " + username);
         }
     }
 
     public void deleteUser(String username, String database) {
-        PostgreSql.validateTemporaryUsername(username);
+        PostgreSql.validateIdentifier(username);
         PostgreSql.validateIdentifier(database);
 
         String readerRole = PostgreSql.readerGroupRole(database);
@@ -107,7 +107,7 @@ public class PostgresUserRepository {
 
         revokeAccess(username, readerRole, writerRole);
 
-        executeClusterDdl("DROP ROLE IF EXISTS " + PostgreSql.temporaryUsername(username));
+        executeClusterDdl("DROP ROLE IF EXISTS " + PostgreSql.identifier(username));
     }
 
     public void dropUsersFromDataset(String database, List<String> users) {
@@ -118,7 +118,7 @@ public class PostgresUserRepository {
 
         for (String username : users) {
             revokeAccess(username, readerRole, writerRole);
-            executeClusterDdl("DROP ROLE IF EXISTS " + PostgreSql.temporaryUsername(username));
+            executeClusterDdl("DROP ROLE IF EXISTS " + PostgreSql.identifier(username));
         }
 
         executeClusterDdl("""
@@ -254,7 +254,7 @@ public class PostgresUserRepository {
     }
 
     private void createloginRole(String username, String password, OffsetDateTime validUntil, boolean neverExpires) {
-        PostgreSql.validateTemporaryUsername(username);
+        PostgreSql.validateIdentifier(username);
 
         String validUntilSql = neverExpires ? ""
                 : "VALID UNTIL " + PostgreSql.stringLiteral(validUntil.toString());
@@ -270,13 +270,13 @@ public class PostgresUserRepository {
                 NOREPLICATION
                 INHERIT
                 """.formatted(
-                PostgreSql.temporaryUsername(username),
+                PostgreSql.identifier(username),
                 PostgreSql.stringLiteral(password),
                 PostgreSql.stringLiteral(validUntilSql)));
     }
 
     private void refreshPassword(String username, String password, OffsetDateTime validUntil, boolean neverExpires) {
-        PostgreSql.validateTemporaryUsername(username);
+        PostgreSql.validateIdentifier(username);
 
         String validUntilSql = neverExpires ? ""
                 : "VALID UNTIL " + PostgreSql.stringLiteral(validUntil.toString());
@@ -286,7 +286,7 @@ public class PostgresUserRepository {
                 WITH PASSWORD %s
                 %s
                 """.formatted(
-                PostgreSql.temporaryUsername(username),
+                PostgreSql.identifier(username),
                 PostgreSql.stringLiteral(password),
                 PostgreSql.stringLiteral(validUntilSql)));
     }
@@ -296,7 +296,7 @@ public class PostgresUserRepository {
                 GRANT %s TO %s
                 """.formatted(
                 PostgreSql.identifier(groupRole),
-                PostgreSql.temporaryUsername(username)));
+                PostgreSql.identifier(username)));
     }
 
     private void executeClusterDdl(String sql) {
@@ -318,7 +318,7 @@ public class PostgresUserRepository {
     }
 
     private String randomUsername(String mode) {
-        return "dl_" + mode + "_" + UUID.randomUUID().toString().replace("-", "").substring(0, 50);
+        return "dl_" + mode + "_" + UUID.randomUUID().toString().replace("-", "_");
     }
 
     public record DbCredentials(

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import se.kth.security.AccessLevel;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -51,11 +52,13 @@ public class Credential {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    public Credential(UUID datasetId, UUID userId, String name, String postgresUsername, String garageAccessKeyId,
+    public Credential(UUID datasetId, UUID userId, String name, String accessLevel, String postgresUsername,
+            String garageAccessKeyId,
             OffsetDateTime expiresAt) {
         this.datasetId = datasetId;
         this.userId = userId;
         this.name = name;
+        this.accessLevel = accessLevel;
         this.postgresUsername = postgresUsername;
         this.garageAccessKeyId = garageAccessKeyId;
         this.expiresAt = expiresAt;

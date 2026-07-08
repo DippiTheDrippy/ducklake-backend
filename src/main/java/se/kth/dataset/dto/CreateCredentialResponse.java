@@ -6,24 +6,24 @@ import java.util.UUID;
 import se.kth.security.AccessLevel;
 
 public record CreateCredentialResponse(
-        UUID id,
+                UUID id,
 
-        AccessLevel accessLevel,
+                AccessLevel accessLevel,
 
-        String name,
+                String name,
 
-        UUID datasetId,
-        UUID userId,
+                UUID datasetId,
+                UUID userId,
 
-        String database,
-        String bucket,
+                String database,
+                String bucket,
 
-        String postgresUsername,
-        String postgresPassword,
+                String postgresUsername,
+                String postgresPassword,
 
-        String garageAccessKeyId,
-        String garageSecretAccessKey,
+                String garageAccessKeyId,
+                String garageSecretAccessKey,
 
-        OffsetDateTime expiresAt) {
+                OffsetDateTime expiresAt) {
 
 }

@@ -4,6 +4,10 @@ import jakarta.enterprise.context.ApplicationScoped;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import se.kth.garage.dto.*;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
@@ -13,6 +17,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.time.OffsetDateTime;
 
 @ApplicationScoped
@@ -66,8 +71,8 @@ public class GarageRepository {
         return garageAdminClient.createKey(
                 authorizationHeader(),
                 new CreateKeyRequest(
-                        expiration,
                         name,
+                        expiration,
                         neverExpires));
     }
 
@@ -93,15 +98,23 @@ public class GarageRepository {
      * UPLOADS
      */
 
-    public void upload(String fileName, InputStream inputStream, long contentLength, String contentType,
-            String bucketName) {
+    public void upload(
+            String fileName,
+            Path path,
+            String contentType,
+            String bucketName,
+            String accessKeyId,
+            String secretAccessKey) {
         PutObjectRequest request = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(fileName)
                 .contentType(contentType)
+                .overrideConfiguration(config -> config.credentialsProvider(
+                        StaticCredentialsProvider.create(
+                                AwsBasicCredentials.create(accessKeyId, secretAccessKey))))
                 .build();
 
-        s3Client.putObject(request, RequestBody.fromInputStream(inputStream, contentLength));
+        s3Client.putObject(request, RequestBody.fromFile(path));
     }
 
     public void deleteFile(String bucket, String key) {
