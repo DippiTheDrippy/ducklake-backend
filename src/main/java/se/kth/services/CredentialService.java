@@ -1,0 +1,206 @@
+package se.kth.services;
+
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.UUID;
+
+import io.quarkus.security.UnauthorizedException;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.BadRequestException;
+import se.kth.DTO.credentials.CreateCredentialRequest;
+import se.kth.DTO.credentials.CreateCredentialResponse;
+import se.kth.DTO.garage.CreateBucketResponse;
+import se.kth.DTO.garage.CreateKeyResponse;
+import se.kth.common.Pagination;
+import se.kth.common.exceptions.PostgresAdminException;
+import se.kth.common.exceptions.PostgresException;
+import se.kth.model.AccessLevel;
+import se.kth.model.Credential;
+import se.kth.model.Dataset;
+import se.kth.model.Group;
+import se.kth.model.JwtUser;
+import se.kth.repositories.CredentialRepository;
+import se.kth.repositories.DatasetRepository;
+import se.kth.repositories.GarageRepository;
+import se.kth.repositories.KeycloakRepository;
+import se.kth.repositories.PermissionRepository;
+import se.kth.repositories.postgres.PostgresUserRepository;
+import se.kth.repositories.postgres.PostgresUserRepository.DbCredentials;
+
+@ApplicationScoped
+public class CredentialService {
+
+        @Inject
+        CredentialRepository credentialRepository;
+
+        @Inject
+        DatasetRepository datasetRepository;
+
+        @Inject
+        PostgresUserRepository postgresUserRepository;
+
+        @Inject
+        GarageRepository garageRepository;
+
+        @Inject
+        PermissionRepository permissionRepository;
+
+        @Inject
+        KeycloakRepository keycloakRepository;
+
+        public Credential getDatasetCredential(JwtUser user, String datasetId) {
+                return credentialRepository.findByDatasetAndUser(UUID.fromString(datasetId), user.id()).orElse(null);
+        }
+
+        public Pagination<Credential> listUserCredentials(JwtUser user, int pageIndex, int pageSize) {
+                return credentialRepository.listByUser(user.id(), pageIndex, pageSize);
+        }
+
+        /*
+         * Create a set of credentials for a user for a dataset:
+         * - Perform checks of whether the user has access to the existing dataset
+         * - Create garage access key
+         * - Create postgres user with access to the ducklake catalog database
+         */
+        public CreateCredentialResponse createCredential(JwtUser user, String datasetId, CreateCredentialRequest req) {
+                // Locate user and dataset
+                Dataset d = datasetRepository.findByIdOptional(UUID.fromString(datasetId))
+                                .orElseThrow(() -> new NoSuchElementException("Connected dataset could not be found!"));
+
+                List<UUID> groupIds = keycloakRepository.getAllGroupsForUser(user.id().toString())
+                                .stream()
+                                .map(Group::getId)
+                                .toList();
+
+                // Does user have request access level to the dataset?
+                if (permissionRepository.hasAccessLevel(user.id(), groupIds, d.getId(), req.access())) {
+                        // Create garage access key, access level is assigned below
+                        String keyName = "ducklake_cbh_" + UUID.randomUUID().toString();
+                        CreateBucketResponse bucket = garageRepository.getBucketByGlobalAlias(d.getBucketName());
+                        CreateKeyResponse key = garageRepository.createKey(keyName, req.expiresAt(),
+                                        req.neverExpires());
+                        DbCredentials dbCred = null;
+
+                        // Create READ or WRITE postgres user, assign READ or WRITE access to garage key
+                        if (req.access().compareTo(AccessLevel.READ) == 0) {
+                                dbCred = postgresUserRepository.createReadOnlyUser(d.getName(), req.expiresAt(),
+                                                req.neverExpires());
+                                garageRepository.allowKey(key.accessKeyId(), bucket.id(), false);
+                        } else if (req.access().compareTo(AccessLevel.WRITE) == 0) {
+                                dbCred = postgresUserRepository.createReadWriteUser(d.getName(), req.expiresAt(),
+                                                req.neverExpires());
+                                garageRepository.allowKey(key.accessKeyId(), bucket.id(), true);
+                        }
+
+                        if (dbCred == null) {
+                                garageRepository.deleteKey(key.accessKeyId());
+                                throw new PostgresException("Something went wrong! Unable to create postgres user");
+                        }
+
+                        Credential cred = new Credential(
+                                        d.getId(),
+                                        user.id(),
+                                        req.name(),
+                                        req.access().toString(),
+                                        dbCred.username(),
+                                        key.accessKeyId(),
+                                        req.neverExpires() ? null : req.expiresAt());
+                        credentialRepository.save(cred);
+
+                        return new CreateCredentialResponse(
+                                        cred.getId(),
+                                        req.access(),
+                                        req.name(),
+                                        d.getId(),
+                                        user.id(),
+                                        d.getName(),
+                                        d.getBucketName(),
+                                        dbCred.username(),
+                                        dbCred.password(),
+                                        key.accessKeyId(),
+                                        key.secretAccessKey(),
+                                        req.neverExpires() ? null : req.expiresAt());
+                } else {
+                        throw new UnauthorizedException("User does not have corresponding access to this dataset!");
+                }
+        }
+
+        /*
+         * Rotate a user's dataset credentials.
+         * - Generates a new password for the postgres user.
+         * - Recreates the Garage Access Key.
+         */
+        public CreateCredentialResponse rotateCredential(JwtUser user, String id) {
+                // Locate user, locate credential
+                Credential cred = credentialRepository.findByIdOptional(UUID.fromString(id))
+                                .orElseThrow(() -> new NoSuchElementException("No such credential!"));
+
+                if (cred.expired())
+                        throw new BadRequestException("Credential has already expired.");
+
+                // Make sure user owns the credential
+                if (user.id().compareTo(cred.getUserId()) != 0) {
+                        throw new UnauthorizedException("User does not own this credential");
+                }
+
+                Dataset d = datasetRepository.findByIdOptional(cred.getDatasetId())
+                                .orElseThrow(() -> new NoSuchElementException("Connected dataset could not be found!"));
+
+                // Create new password for postgres user
+                String password = postgresUserRepository.rotateUserPassword(cred.getPostgresUsername(),
+                                cred.getExpiresAt(),
+                                cred.getExpiresAt() == null);
+
+                // Delete old access key
+                garageRepository.deleteKey(cred.getGarageAccessKeyId());
+
+                // Create garage access key, access level is assigned below
+                String keyName = "ducklake_cbh_" + UUID.randomUUID().toString();
+                CreateBucketResponse bucket = garageRepository.getBucketByGlobalAlias(d.getBucketName());
+                CreateKeyResponse key = garageRepository.createKey(keyName, cred.getExpiresAt(),
+                                cred.getExpiresAt() == null);
+                garageRepository.allowKey(key.accessKeyId(), bucket.id(),
+                                AccessLevel.valueOf(cred.getAccessLevel()).compareTo(AccessLevel.WRITE) == 0);
+
+                credentialRepository.rotate(cred.getId(), key.accessKeyId());
+
+                return new CreateCredentialResponse(
+                                cred.getId(),
+                                AccessLevel.valueOf(cred.getAccessLevel()),
+                                cred.getName(),
+                                d.getId(),
+                                user.id(),
+                                d.getName(),
+                                d.getBucketName(),
+                                cred.getPostgresUsername(),
+                                password,
+                                key.accessKeyId(),
+                                key.secretAccessKey(),
+                                cred.getExpiresAt());
+        }
+
+        /*
+         * Delete a user's dataset credentials.
+         * - Checks whether the user owns the credential they are aiming to delete
+         * - Delete postgres user, garage key, and credential entity in backend db
+         */
+        public void deleteCredential(JwtUser user, String id) {
+                Credential cred = credentialRepository.findByIdOptional(UUID.fromString(id))
+                                .orElseThrow(() -> new NoSuchElementException("No such credential!"));
+
+                // Make sure user owns the credential
+                if (user.id().compareTo(cred.getUserId()) != 0) {
+                        throw new UnauthorizedException("User does not own this credential");
+                }
+
+                Dataset d = datasetRepository.findByIdOptional(cred.getDatasetId())
+                                .orElseThrow(() -> new NoSuchElementException("Connected dataset could not be found!"));
+
+                // delete postgres user, access key and then credential.
+                postgresUserRepository.deleteUser(cred.getPostgresUsername(), d.getName());
+                garageRepository.deleteKey(cred.getGarageAccessKeyId());
+                credentialRepository.deleteByIdSafe(cred.getId());
+        }
+
+}
